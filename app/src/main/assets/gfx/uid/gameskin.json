@@ -1,0 +1,26 @@
+{
+com.badlogic.gdx.graphics.g2d.BitmapFont: { 
+	default-font: { file: default.fnt },
+	score-font: { file: numbers.fnt },
+	score-font-small: { file: numbers-small.fnt },
+	combo-font: { file: comboNum.fnt }
+	},
+com.badlogic.gdx.graphics.Color: {
+	red: { a: 1, b: 0, g: 0, r: 1 },
+	black: { a: 1, b: 1, g: 1, r: 1 },
+	white: { a: 1, b: 1, g: 1, r: 1 }
+},
+com.badlogic.gdx.scenes.scene2d.ui.Skin$TintedDrawable: {
+},
+com.badlogic.gdx.scenes.scene2d.ui.Label$LabelStyle: {
+	default: { font: default-font, fontColor: white },
+	difficulty: 	{ font: default-font, fontColor: white },
+	songTitle: { font: default-font, fontColor: white },
+	score: {font: score-font, fontColor: white },
+	score-small: {font: score-font-small, fontColor: white },
+	health: { font: default-font, fontColor: white },
+	lyrics: { font: default-font, fontColor: white },
+	comboLbl: {font: combo-font, fontColor: white },
+	accuracy: { font: default-font, fontColor: white }
+}
+}

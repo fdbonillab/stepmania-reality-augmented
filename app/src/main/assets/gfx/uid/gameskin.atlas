@@ -1,0 +1,398 @@
+
+gameskin.png
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+arMarvelous
+  rotate: false
+  xy: 1, 468
+  size: 226, 38
+  orig: 226, 38
+  offset: 0, 0
+  index: -1
+arPerfect
+  rotate: false
+  xy: 1, 428
+  size: 161, 38
+  orig: 161, 38
+  offset: 0, 0
+  index: -1
+arGreat
+  rotate: false
+  xy: 229, 473
+  size: 105, 33
+  orig: 105, 33
+  offset: 0, 0
+  index: -1
+arBoo
+  rotate: false
+  xy: 1, 391
+  size: 95, 35
+  orig: 95, 35
+  offset: 0, 0
+  index: -1
+arrow12
+  rotate: false
+  xy: 1, 326
+  size: 63, 63
+  orig: 63, 63
+  offset: 0, 0
+  index: -1
+arrow16
+  rotate: false
+  xy: 1, 261
+  size: 63, 63
+  orig: 63, 63
+  offset: 0, 0
+  index: -1
+arrow192
+  rotate: false
+  xy: 1, 196
+  size: 63, 63
+  orig: 63, 63
+  offset: 0, 0
+  index: -1
+arrow24
+  rotate: false
+  xy: 1, 131
+  size: 63, 63
+  orig: 63, 63
+  offset: 0, 0
+  index: -1
+arrow32
+  rotate: false
+  xy: 1, 66
+  size: 63, 63
+  orig: 63, 63
+  offset: 0, 0
+  index: -1
+arrow4
+  rotate: false
+  xy: 1, 1
+  size: 63, 63
+  orig: 63, 63
+  offset: 0, 0
+  index: -1
+arNoGood
+  rotate: false
+  xy: 336, 479
+  size: 95, 27
+  orig: 95, 27
+  offset: 0, 0
+  index: -1
+arGood
+  rotate: false
+  xy: 433, 475
+  size: 76, 31
+  orig: 76, 31
+  offset: 0, 0
+  index: -1
+arrow48
+  rotate: false
+  xy: 164, 403
+  size: 63, 63
+  orig: 63, 63
+  offset: 0, 0
+  index: -1
+arrow64
+  rotate: false
+  xy: 229, 408
+  size: 63, 63
+  orig: 63, 63
+  offset: 0, 0
+  index: -1
+arrow8
+  rotate: false
+  xy: 294, 408
+  size: 63, 63
+  orig: 63, 63
+  offset: 0, 0
+  index: -1
+tapButtonDown
+  rotate: false
+  xy: 359, 414
+  size: 63, 63
+  orig: 63, 63
+  offset: 0, 0
+  index: -1
+tapButtonUp
+  rotate: false
+  xy: 424, 410
+  size: 63, 63
+  orig: 63, 63
+  offset: 0, 0
+  index: -1
+noteKey
+  rotate: false
+  xy: 489, 422
+  size: 22, 51
+  orig: 22, 51
+  offset: 0, 0
+  index: -1
+tapHit
+  rotate: false
+  xy: 98, 363
+  size: 63, 63
+  orig: 63, 63
+  offset: 0, 0
+  index: -1
+tapHitFlash
+  rotate: false
+  xy: 163, 338
+  size: 63, 63
+  orig: 63, 63
+  offset: 0, 0
+  index: -1
+arBad
+  rotate: false
+  xy: 229, 374
+  size: 73, 32
+  orig: 73, 32
+  offset: 0, 0
+  index: -1
+holdDown
+  rotate: false
+  xy: 228, 314
+  size: 50, 58
+  orig: 50, 58
+  offset: 0, 0
+  index: -1
+holdDownInactive
+  rotate: false
+  xy: 304, 348
+  size: 50, 58
+  orig: 50, 58
+  offset: 0, 0
+  index: -1
+simpleNote
+  rotate: false
+  xy: 280, 340
+  size: 22, 32
+  orig: 22, 32
+  offset: 0, 0
+  index: -1
+holdLeft
+  rotate: false
+  xy: 66, 303
+  size: 50, 58
+  orig: 50, 58
+  offset: 0, 0
+  index: -1
+holdLeftInactive
+  rotate: false
+  xy: 66, 243
+  size: 50, 58
+  orig: 50, 58
+  offset: 0, 0
+  index: -1
+holdUp
+  rotate: false
+  xy: 66, 183
+  size: 50, 58
+  orig: 50, 58
+  offset: 0, 0
+  index: -1
+holdUpInactive
+  rotate: false
+  xy: 66, 123
+  size: 50, 58
+  orig: 50, 58
+  offset: 0, 0
+  index: -1
+rollDown
+  rotate: false
+  xy: 66, 63
+  size: 50, 58
+  orig: 50, 58
+  offset: 0, 0
+  index: -1
+rollDownInactive
+  rotate: false
+  xy: 66, 3
+  size: 50, 58
+  orig: 50, 58
+  offset: 0, 0
+  index: -1
+doubleNote
+  rotate: false
+  xy: 118, 333
+  size: 35, 28
+  orig: 35, 28
+  offset: 0, 0
+  index: -1
+rollLeft
+  rotate: false
+  xy: 118, 273
+  size: 50, 58
+  orig: 50, 58
+  offset: 0, 0
+  index: -1
+rollLeftInactive
+  rotate: false
+  xy: 118, 213
+  size: 50, 58
+  orig: 50, 58
+  offset: 0, 0
+  index: -1
+rollUp
+  rotate: false
+  xy: 118, 153
+  size: 50, 58
+  orig: 50, 58
+  offset: 0, 0
+  index: -1
+rollUpInactive
+  rotate: false
+  xy: 118, 93
+  size: 50, 58
+  orig: 50, 58
+  offset: 0, 0
+  index: -1
+mine
+  rotate: false
+  xy: 118, 47
+  size: 44, 44
+  orig: 44, 44
+  offset: 0, 0
+  index: -1
+mineFlash
+  rotate: false
+  xy: 118, 1
+  size: 44, 44
+  orig: 44, 44
+  offset: 0, 0
+  index: -1
+arOK
+  rotate: false
+  xy: 170, 307
+  size: 50, 29
+  orig: 50, 29
+  offset: 0, 0
+  index: -1
+rollStartDown
+  rotate: false
+  xy: 170, 279
+  size: 50, 26
+  orig: 50, 26
+  offset: 0, 0
+  index: -1
+rollStartDownInactive
+  rotate: false
+  xy: 170, 251
+  size: 50, 26
+  orig: 50, 26
+  offset: 0, 0
+  index: -1
+rollStartLeft
+  rotate: false
+  xy: 170, 223
+  size: 50, 26
+  orig: 50, 26
+  offset: 0, 0
+  index: -1
+arMiss
+  rotate: false
+  xy: 170, 196
+  size: 50, 25
+  orig: 50, 25
+  offset: 0, 0
+  index: -1
+holdStartDown
+  rotate: false
+  xy: 170, 169
+  size: 50, 25
+  orig: 50, 25
+  offset: 0, 0
+  index: -1
+holdStartDownInactive
+  rotate: false
+  xy: 170, 142
+  size: 50, 25
+  orig: 50, 25
+  offset: 0, 0
+  index: -1
+holdStartLeft
+  rotate: false
+  xy: 170, 115
+  size: 50, 25
+  orig: 50, 25
+  offset: 0, 0
+  index: -1
+holdStartLeftInactive
+  rotate: false
+  xy: 170, 88
+  size: 50, 25
+  orig: 50, 25
+  offset: 0, 0
+  index: -1
+holdStartUp
+  rotate: false
+  xy: 222, 287
+  size: 50, 25
+  orig: 50, 25
+  offset: 0, 0
+  index: -1
+holdStartUpInactive
+  rotate: false
+  xy: 222, 260
+  size: 50, 25
+  orig: 50, 25
+  offset: 0, 0
+  index: -1
+rollStartLeftInactive
+  rotate: false
+  xy: 222, 233
+  size: 50, 25
+  orig: 50, 25
+  offset: 0, 0
+  index: -1
+rollStartUp
+  rotate: false
+  xy: 222, 206
+  size: 50, 25
+  orig: 50, 25
+  offset: 0, 0
+  index: -1
+rollStartUpInactive
+  rotate: false
+  xy: 222, 179
+  size: 50, 25
+  orig: 50, 25
+  offset: 0, 0
+  index: -1
+hpBarFront
+  rotate: false
+  xy: 222, 159
+  size: 34, 18
+  split: 16, 16, 8, 8
+  orig: 34, 18
+  offset: 0, 0
+  index: -1
+fireParticle
+  rotate: false
+  xy: 66, 363
+  size: 11, 26
+  orig: 11, 26
+  offset: 0, 0
+  index: -1
+smoke
+  rotate: false
+  xy: 280, 317
+  size: 21, 21
+  orig: 21, 21
+  offset: 0, 0
+  index: -1
+delete01
+  rotate: false
+  xy: 489, 410
+  size: 10, 10
+  orig: 10, 10
+  offset: 0, 0
+  index: -1
+hpBarRunner
+  rotate: false
+  xy: 155, 356
+  size: 6, 5
+  orig: 6, 5
+  offset: 0, 0
+  index: -1

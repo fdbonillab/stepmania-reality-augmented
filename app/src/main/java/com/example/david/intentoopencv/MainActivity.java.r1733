@@ -1,0 +1,1601 @@
+package com.example.david.intentoopencv;
+
+
+import android.Manifest;
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.drawable.Drawable;
+import android.media.Image;
+import android.media.MediaPlayer;
+import android.net.Uri;
+import android.os.Bundle;
+import android.os.Handler;
+import android.preference.Preference;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
+import android.text.method.LinkMovementMethod;
+import android.util.Log;
+import android.view.Gravity;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.MotionEvent;
+import android.view.SubMenu;
+import android.view.SurfaceView;
+import android.view.View;
+import android.view.WindowManager;
+import android.widget.Button;
+import android.widget.GridLayout;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.RadioGroup;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
+
+import com.example.david.intentoopencv.ui.Fragment_Settings;
+
+import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.CameraBridgeViewBase;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
+import org.opencv.android.LoaderCallbackInterface;
+import org.opencv.android.OpenCVLoader;
+import org.opencv.android.Utils;
+import org.opencv.core.Core;
+import org.opencv.core.CvException;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfPoint;
+import org.opencv.core.Point;
+import org.opencv.core.Rect;
+import org.opencv.core.Scalar;
+import org.opencv.core.Size;
+import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.imgproc.Imgproc;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+import java.util.Random;
+import java.util.TreeMap;
+
+import static org.opencv.core.Core.flip;
+import static org.opencv.core.CvType.CV_8UC1;
+import static org.opencv.imgproc.Imgproc.circle;
+import static org.opencv.imgproc.Imgproc.contourArea;
+import static org.opencv.imgproc.Imgproc.rectangle;
+import static org.opencv.imgproc.Imgproc.resize;
+
+public class MainActivity extends AppCompatActivity implements CvCameraViewListener2 , View.OnClickListener, View.OnTouchListener {
+    private static final String TAG = "OCVSample::Activity";
+
+    private CameraBridgeViewBase mOpenCvCameraView;
+    private boolean              mIsJavaCamera = true;
+    private MenuItem             mItemSwitchCamera = null;
+    private Mat                    mRgba;
+    private Mat                    mGray;
+    private Mat  copiaRgba;
+    private Mat imgUltimoAcierto;
+    private Mat base;
+    int toques;
+    Random rand = new Random();
+    //Topo unTopo = null;
+    Topo topoPlantilla;
+    ArrayList<Topo> lstTopos;
+    int LIMITE_LISTA_TOPOS = 10;
+    int sextoDeAnchoPantalla;
+    int DIVISION_PANTALLA_ANCHO = 8;
+    int duracionFrame;
+    final static int LIMITE_DURACION_FRAME = 4;
+    Mat frameAnterior;
+    long startTime = 0;
+    long inicioEspera = 0;
+    final int SEGUNDOS_LIMITE = 30;////AKI ESTAN LOS SEGUNDOS LIMITES PARA AJUSTAR TIEMPOS DE PRUEBAS
+    final int SEGUNDOS_ESPERA_LIMITE = 3;
+    final static int NUMERO_NIVELES = 8;
+    boolean inicioJuego = false;
+    boolean nivelEscogido = false;
+    String textTime;
+    int ultimaDeteccion = NADA;
+    String ultimoMensaje;
+    boolean endGame = false;
+    GridLayout layoutNiveles;
+    Button botonStart = null;
+    ImageButton botonShare = null;
+    ArrayList<Button> lstBotonesNiveles;
+    LinearLayout idForSaveView;
+    static int CODE_FOR_RESULT=981;
+    private MenuItem[] tmEffectMenuItems;
+    private SubMenu mColorEffectsMenu;
+    private MenuItem[] mResolutionMenuItems;
+    private SubMenu mResolutionMenu;
+    Toolbar toolbar;
+    boolean hayUnAcierto = false;
+    int duracionMensaje;
+    List<Mat> lstSecuenciaGolpe;
+    List<Mat> lstSecuenciaGolpeMask;
+    SecuenciaEstados secuenciaEstadosNormal;
+    SecuenciaEstados secuenciaEstadosGolpe;
+    Map<Integer,Boolean> mapNivelesSuperados;
+    static final String MSG_ACIERTO= "Acierto";
+    static final String MSG_FALLA = "Falla";
+    static final String MSG_VACIO = "";
+    static final int NADA = 0;
+    static final int ACIERTO = 1;
+    static final int FALLA = 2;
+    static final int LIMITE_DURACION_MENSAJE = 10;
+    static final String ULTIMO_NIVEL_SUPERADO= "ultimoNivel";
+    boolean enEspera = false;
+    private Bitmap bitmapForShare;
+    Nivel nivel;
+
+    int face[] = {Core.FONT_HERSHEY_SIMPLEX, Core.FONT_HERSHEY_PLAIN, Core.FONT_HERSHEY_DUPLEX, Core.FONT_HERSHEY_COMPLEX,
+            Core.FONT_HERSHEY_TRIPLEX, Core.FONT_HERSHEY_COMPLEX_SMALL, Core.FONT_HERSHEY_SCRIPT_SIMPLEX,
+            Core.FONT_HERSHEY_SCRIPT_COMPLEX, Core.FONT_ITALIC};
+    //runs without a timer by reposting this handler at the end of the runnable
+    Handler timerHandler = new Handler();
+    Runnable timerRunnable = new Runnable() {
+
+        @Override
+        public void run() {
+            long millis = System.currentTimeMillis() - startTime;
+            int seconds = (int) (millis / 1000);
+            seconds = SEGUNDOS_LIMITE -seconds;
+            int minutes = seconds / 60;
+            seconds = seconds % 60;
+            if( seconds < 0 ){
+                endGame = true;
+                /////
+                if( !nivelEscogido ){
+                    layoutNiveles.setVisibility(View.VISIBLE);
+                    botonShare.setVisibility(View.VISIBLE   );
+                }
+            } else {
+                textTime = String.format("%d:%02d", minutes, seconds);
+                if(nivelEscogido)nivelEscogido = false;
+            }
+            if( imgUltimoAcierto != null && seconds == 0 ){//&& imgUltimoAcierto != null && (seconds > SEGUNDOS_LIMITE*0.5) ){
+                Log.i(TAG, "****** en guardarImagen seconds "+seconds);
+                guardarImagenUltimoACierto();
+            }
+            if( endGame && botonStart != null && seconds <= 0 ){//&& !enEspera ){
+                botonStart.setText("New Game");
+                if( !enEspera ){
+                    botonStart.setVisibility(View.VISIBLE  );
+                }
+                endGame = false;
+                inicioJuego = false;
+                //enEspera = true;
+            } else if ( seconds > 0) {
+                botonStart.setVisibility(View.GONE);
+            }
+            timerHandler.postDelayed(this, 500);
+        }
+    };
+    Runnable timerEsperaRunnable = new Runnable() {
+
+        @Override
+        public void run() {
+            startTime = System.currentTimeMillis();
+            inicioJuego = true;
+            enEspera = false;
+            inicioEspera = 0;
+            timerHandler.postDelayed(timerRunnable, 0);
+            botonStart.setVisibility(View.GONE);
+        }
+    };
+
+    private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
+        @Override
+        public void onManagerConnected(int status) {
+            switch (status) {
+                case LoaderCallbackInterface.SUCCESS:
+                {
+                    Log.i(TAG, "OpenCV loaded successfully");
+                    mOpenCvCameraView.enableView();
+                } break;
+                default:
+                {
+                    super.onManagerConnected(status);
+                } break;
+            }
+        }
+    };
+    public boolean hasChanges(Mat current) {
+        int PIXEL_DIFF_THRESHOLD = 5;
+        int IMAGE_DIFF_THRESHOLD = 100;//5;
+        //Mat base = new Mat();
+        Log.i(TAG, "****** en hasChanges ");
+        Mat bg = new Mat();
+        Mat cg = new Mat();
+        Mat diff = new Mat();
+        Mat tdiff = new Mat();
+        if (base == null) {
+            base = current.clone();
+            return false;
+        }
+        Imgproc.cvtColor(base, bg, Imgproc.COLOR_BGR2GRAY);
+        Imgproc.cvtColor(current, cg, Imgproc.COLOR_BGR2GRAY);
+        Core.absdiff(bg, cg, diff);
+        Imgproc.threshold(diff, tdiff, PIXEL_DIFF_THRESHOLD, 0.0, Imgproc.THRESH_TOZERO);
+        //Log.i(TAG, "****** count non zero " +Core.countNonZero(tdiff));
+        if (Core.countNonZero(tdiff) <= IMAGE_DIFF_THRESHOLD) {
+            return false;
+        }
+        Imgproc.threshold(diff, diff, PIXEL_DIFF_THRESHOLD, 255, Imgproc.THRESH_BINARY);
+        Imgproc.dilate(diff, diff, new Mat());
+        Mat se = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(5,5));
+        Imgproc.morphologyEx(diff, diff, Imgproc.MORPH_CLOSE, se);
+        List<MatOfPoint> points = new ArrayList<MatOfPoint>();
+        Mat contours = new Mat();
+        Imgproc.findContours(diff, points, contours, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
+        int n = 0;
+        for (Mat pm: points) {
+            //log(lvl, "(%d) %s", n++, pm);
+            Log.i(TAG, "****** points " + n+++" "+pm);
+            //printMatI(pm);
+        }
+        //log(lvl, "contours: %s", contours);
+        Log.i(TAG, "****** countours " +contours);
+        //printMatI(contours);
+        //the largest contour is found at the end of the contours vector
+        //we will simply assume that the biggest contour is the object we are looking for.
+        //vector< vector<Point> > largestContourVec;
+        //largestContourVec.push_back(contours.at(contours.size()-1));
+        MatOfPoint largestContour = points.get(points.size()-1);
+        Point[] cornerpoints = points.get(points.size()-1).toArray();
+        //double x = cornerpoints[0].x;
+        //double y = ;
+        //Core.rectangle(current,);
+        // Get bounding rect of contour
+        Rect rect = Imgproc.boundingRect(largestContour);
+
+        // draw enclosing rectangle (all same color, but you could use variable i to make them unique)
+        rectangle(current, new Point(rect.x,rect.y), new Point(rect.x+rect.width
+                ,rect.y+rect.height), new Scalar(255, 0, 0, 255), 3);
+        Scalar color =  new Scalar( 255, 255, 255 );
+        Imgproc.drawContours( current, points,-1,color,3);
+        Imgproc.putText(current, "intento 1",
+                new Point(1, 1),
+                Core.FONT_HERSHEY_PLAIN, 1.0, new Scalar(255,0,0));
+        base = current.clone();
+        return true;
+    }
+   /* public static List<Element> detectChanges(Mat base, Mat mChanged) {
+        int PIXEL_DIFF_THRESHOLD = 3;
+        int IMAGE_DIFF_THRESHOLD = 5;
+        Mat mBaseGray = Element.getNewMat();
+        Mat mChangedGray = Element.getNewMat();
+        Mat mDiffAbs = Element.getNewMat();
+        Mat mDiffTresh = Element.getNewMat();
+        Mat mChanges = Element.getNewMat();
+        List<Element> rectangles = new ArrayList<>();
+        Imgproc.cvtColor(base, mBaseGray, toGray);
+        Imgproc.cvtColor(mChanged, mChangedGray, toGray);
+        Core.absdiff(mBaseGray, mChangedGray, mDiffAbs);
+        Imgproc.threshold(mDiffAbs, mDiffTresh, PIXEL_DIFF_THRESHOLD, 0.0, Imgproc.THRESH_TOZERO);
+        if (Core.countNonZero(mDiffTresh) > IMAGE_DIFF_THRESHOLD) {
+            Imgproc.threshold(mDiffAbs, mDiffAbs, PIXEL_DIFF_THRESHOLD, 255, Imgproc.THRESH_BINARY);
+            Imgproc.dilate(mDiffAbs, mDiffAbs, Element.getNewMat());
+            Mat se = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(5, 5));
+            Imgproc.morphologyEx(mDiffAbs, mDiffAbs, Imgproc.MORPH_CLOSE, se);
+            List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
+            Mat mHierarchy = Element.getNewMat();
+            Imgproc.findContours(mDiffAbs, contours, mHierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
+            rectangles = contoursToRectangle(contours);
+            Core.subtract(mDiffAbs, mDiffAbs, mChanges);
+            Imgproc.drawContours(mChanges, contours, -1, new Scalar(255));
+            //logShow(mDiffAbs);
+        }
+        return rectangles;
+    }*/
+
+    public Mat cambiarCurrent(Mat current) {
+        int PIXEL_DIFF_THRESHOLD = 5;
+        int IMAGE_DIFF_THRESHOLD = 5;//5;//1000
+        //Mat base = new Mat();
+        Log.i(TAG, "****** en cambiarCurrent version 8.8 ");
+        Mat bg = new Mat();
+        Mat cg = new Mat();
+        Mat diff = new Mat();
+        Mat tdiff = new Mat();
+        if (base == null && current != null) {
+            base = current.clone();
+            return current;
+        }
+        Imgproc.cvtColor(base, bg, Imgproc.COLOR_BGR2GRAY);
+        Imgproc.cvtColor(current, cg, Imgproc.COLOR_BGR2GRAY);
+
+        //Imgproc.cvtColor(frame, firstFrame, Imgproc.COLOR_BGR2GRAY);
+        //Imgproc.GaussianBlur(firstFrame, firstFrame, new Size(21, 21), 0);
+
+        Imgproc.GaussianBlur(bg, bg, new Size(21, 21), 0);
+        Imgproc.GaussianBlur(cg, cg, new Size(21, 21), 0);
+        ///Core.absdiff(bg, cg, diff);////parece que resalta el objeto estatico
+        Core.absdiff(cg, bg, diff);
+        //Imgproc.threshold(diff, tdiff, PIXEL_DIFF_THRESHOLD, 0.0, Imgproc.THRESH_TOZERO);
+        Log.i(TAG, "****** count non zero " + Core.countNonZero(tdiff));
+        Imgproc.putText(current, "intento 2",
+                new Point(40, 40),
+                Core.FONT_HERSHEY_PLAIN, 4.0, new Scalar(255,0,0));
+        base = current.clone();
+        return diff;
+    }
+
+    public Mat hasChanges3(Mat current) {
+        int PIXEL_DIFF_THRESHOLD = 5;
+        int IMAGE_DIFF_THRESHOLD = 5;//5;//1000
+        //Mat base = new Mat();
+        String version = "9.2";
+        Log.i(TAG, "****** en hasChanges version "+version);
+        Mat bg = new Mat();
+        Mat cg = new Mat();
+        Mat diff = new Mat();
+        Mat currentCopy = current.clone();
+        if (base == null && current != null) {
+            base = current.clone();
+            //return false;
+            return current;
+        }
+        Imgproc.cvtColor(base, bg, Imgproc.COLOR_BGR2GRAY);
+        Imgproc.cvtColor(current, cg, Imgproc.COLOR_BGR2GRAY);
+
+        //Imgproc.cvtColor(frame, firstFrame, Imgproc.COLOR_BGR2GRAY);
+        //Imgproc.GaussianBlur(firstFrame, firstFrame, new Size(21, 21), 0);
+
+        Imgproc.GaussianBlur(bg, bg, new Size(21, 21), 0);
+        Imgproc.GaussianBlur(cg, cg, new Size(21, 21), 0);
+        ///Core.absdiff(bg, cg, diff);////parece que resalta el objeto estatico
+        Core.absdiff(cg, bg, diff);
+        //Imgproc.threshold(diff, tdiff, PIXEL_DIFF_THRESHOLD, 0.0, Imgproc.THRESH_TOZERO);
+        Log.i(TAG, "****** count non zero " +Core.countNonZero(diff));
+        if (Core.countNonZero(diff) <= IMAGE_DIFF_THRESHOLD) {
+            //current = diff;
+            Imgproc.putText(current, "intento 8 no dif",
+                    new Point(40, 40),
+                    Core.FONT_HERSHEY_PLAIN, 5.0, new Scalar(255,0,0));
+            //return false;
+            return current;
+        }
+        Imgproc.threshold(diff, diff, PIXEL_DIFF_THRESHOLD, 255, Imgproc.THRESH_BINARY);
+        Imgproc.dilate(diff, diff, new Mat());
+        //Mat se = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(5,5));
+        //Imgproc.morphologyEx(diff, diff, Imgproc.MORPH_CLOSE, se);
+        List<MatOfPoint> points = new ArrayList<MatOfPoint>();
+        Mat contours = new Mat();
+        Imgproc.findContours(diff, points, contours, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
+        int n = 0;
+        Log.i(TAG, "****** points size " + points.size()+"  contours size"+contours.size());
+        if ( points != null && points.size() > 0 && false ){
+            for (Mat pm: points) {
+                //log(lvl, "(%d) %s", n++, pm);
+                Log.i(TAG, "****** points version 3" + n+++" "+pm);
+                //printMatI(pm);
+                Mat unContour = pm;
+                Rect rect = Imgproc.boundingRect(unContour);
+
+                // draw enclosing rectangle (all same color, but you could use variable i to make them unique) /// /// descomentar para debug estos dos rects
+                /*rectangle(diff, new Point(rect.x,rect.y), new Point(rect.x+rect.width
+                        ,rect.y+rect.height), new Scalar(255, 0, 0, 255), 3);
+                // draw enclosing rectangle (all same color, but you could use variable i to make them unique)
+                rectangle(currentCopy, new Point(rect.x,rect.y), new Point(rect.x+rect.width
+                        ,rect.y+rect.height), new Scalar(255, 0, 0, 255), 3);*/
+            }
+            //log(lvl, "contours: %s", contours);
+            Log.i(TAG, "****** countours " +contours);
+            //printMatI(contours);
+            //the largest contour is found at the end of the contours vector
+            //we will simply assume that the biggest contour is the object we are looking for.
+            //vector< vector<Point> > largestContourVec;
+            //largestContourVec.push_back(contours.at(contours.size()-1));
+            MatOfPoint largestContour = points.get(points.size()-1);
+            //Point[] cornerpoints = points.get(points.size()-1).toArray();
+            //double x = cornerpoints[0].x;
+            //double y = ;
+            //Core.rectangle(current,);
+            // Get bounding rect of contour
+            Rect rect = Imgproc.boundingRect(largestContour);
+
+            // draw enclosing rectangle (all same color, but you could use variable i to make them unique)
+            /*rectangle(diff, new Point(rect.x,rect.y), new Point(rect.x+rect.width /// descomentar para debug estos dos rects
+                    ,rect.y+rect.height), new Scalar(0, 255, 0, 255), 3);
+            //rectangle(currentCopy, new Point(rect.x,rect.y), new Point(rect.x+rect.width
+                    ,rect.y+rect.height), new Scalar(0, 255, 0, 255), 3);*/
+
+            Scalar color =  new Scalar( 0, 255, 0 );
+            //Imgproc.drawContours( diff, points,-1,color,3);
+        }
+        Imgproc.drawContours( currentCopy, points,-1,new Scalar(0, 255, 0, 255),3); //// descomentar para debug este drawcontours
+        borrarContoursMenores2( contours, currentCopy, points );
+        mostrarAreasContours(contours, currentCopy, points);/// solo pinta los countours mayores
+        base = current.clone();
+        //current = diff;
+        flip(diff,diff,1);
+        flip(currentCopy,currentCopy,1);/// descomentar para debug estos dos puttexts
+        /*Imgproc.putText(diff, "intento "+version+" si dif",
+                new Point(40, 40),
+                Core.FONT_HERSHEY_TRIPLEX, 4.0, new Scalar(0,255,0));
+        Imgproc.putText(currentCopy, "intento "+version+" si dif",
+                new Point(40, 40),
+                Core.FONT_HERSHEY_TRIPLEX, 4.0, new Scalar(0,255,0));*/
+        List listaTopos = new ArrayList();
+        currentCopy = mostrarTopo( currentCopy, diff );
+        //currentCopy = RectangleSubROI(currentCopy, new Rect(20,20,200,200));
+        return currentCopy;
+    }
+    private void borrarContoursMenores( Mat contours, Mat currentCopy, List<MatOfPoint> points ){
+        //double MaxAreaContour = 10;
+        //double MinAreaContour = 80;
+        double MaxAreaContour = Integer.MAX_VALUE;
+        double MinAreaContour = 200;
+        for(int i=0;i<points.size();i++)
+        {
+            MatOfPoint contour = points.get(i);
+            double AreaContour= contourArea(contour);
+            if( AreaContour < MinAreaContour)
+               points.remove(i);
+        }
+    }
+    private void borrarContoursMenores2( Mat contours, Mat currentCopy, List<MatOfPoint> points ){
+        //double MaxAreaContour = 10;
+        //double MinAreaContour = 80;
+        double MaxAreaContour = Integer.MAX_VALUE;
+        double MinAreaContour = 200;
+        if( points.size() > 2 ){
+            TreeMap<Double,MatOfPoint> mapContoursMayores = new TreeMap();
+            TreeMap<Double,MatOfPoint> mapContoursMayoresCopia = new TreeMap();
+            for( int i = 0; i < points.size();i++){
+                MatOfPoint contour = points.get(i);
+                double areaContour= contourArea(contour);
+                mapContoursMayores.put(areaContour,contour);
+            }
+            mapContoursMayoresCopia.put(mapContoursMayores.lastKey(),mapContoursMayores.get(mapContoursMayores.lastKey()));
+            mapContoursMayores.remove(mapContoursMayores.lastKey());
+            mapContoursMayoresCopia.put(mapContoursMayores.lastKey(),mapContoursMayores.get(mapContoursMayores.lastKey()));
+            final MatOfPoint menorDeMayores = mapContoursMayoresCopia.get( mapContoursMayoresCopia.firstKey());
+            double areaMenorDeMayores = contourArea(menorDeMayores);
+            //points.removeIf(n -> (contourArea(n) <= (contourArea(menorDeMayores)));
+            for( int i = 0; i < points.size();i++){
+                MatOfPoint contour = points.get(i);
+                double areaContour= contourArea(contour);
+                if( areaContour < areaMenorDeMayores ){
+                   points.remove(i);
+                }
+            }
+            Log.i(TAG, "points size: " + points.size()+" - "+points);
+            Log.i(TAG, "Lowest key: " + mapContoursMayores.firstKey());
+            Log.i(TAG, "Highest key: " + mapContoursMayores.lastKey());
+            String strAreasQuedaron = "";
+            for( int i = 0; i < points.size();i++){
+                MatOfPoint contour = points.get(i);
+                double areaContour= contourArea(contour);
+                strAreasQuedaron=strAreasQuedaron+ " "+areaContour;
+            }
+            Log.i(TAG, "areas points quedaron "+strAreasQuedaron);
+        }
+        /*for (Map.Entry<Double, MatOfPoint> entry : mapContoursMayores.entrySet())
+        {
+            //System.out.println(entry.getKey() + "/" + entry.getValue());
+            /*  System.out.println("Lowest key: " + treeMap.firstKey());
+                System.out.println("Highest key: " + treeMap.lastKey());
+            *
+
+        }*/
+    }
+    private void mostrarAreasContours( Mat contours, Mat currentCopy, List<MatOfPoint> points ){
+        double MaxAreaContour = Integer.MAX_VALUE;
+        double MinAreaContour = 200;
+        String sizeContours = "***** area contours";
+        Scalar red = new Scalar(255,0,0);
+        Scalar green = new Scalar(0,255,0);
+        Scalar blue = new Scalar(0,0,255);
+        int indiceAreaMayor = 0;
+        double areaMax = 0;
+
+        for(int i=0;i<points.size();i++)
+        {
+            MatOfPoint contour = points.get(i);
+            double areaContour= contourArea(contour);
+            if( areaContour > areaMax ){
+                areaMax = areaContour;
+                indiceAreaMayor = i;
+            }
+            sizeContours+=" "+areaContour;
+            if(areaContour<MaxAreaContour && areaContour>MinAreaContour)
+                //Imgproc.drawContours(currentCopy,contours,i,Scalar(DrawColor),Thickness,LineType,cv::noArray(),2147483647,cv::Point(DrawOffset_x,DrawOffset_y));
+                Imgproc.drawContours( currentCopy, points,i,new Scalar(255, 100, 0, 255),3); //// descomentar para debug este drawcontours
+        }
+        Imgproc.drawContours( currentCopy, points,indiceAreaMayor,blue,3); ////
+        Log.i(TAG, sizeContours);
+    }
+    private Mat mostrarTopo(Mat screen, Mat diff){
+        final Mat maskCopyTo = Mat.zeros(screen.size(), CV_8UC1); //
+        //Bitmap bMap= BitmapFactory.decodeResource(getResources(),R.drawable.image1);
+        //Mat m = Highgui.imread("/media/path_to_image");
+        String imageUri = "drawable://" + R.drawable.unmole2;
+        //Mat img = null;
+        Mat img = Imgcodecs.imread(imageUri);
+        Mat imgMask = null;
+        Bitmap bMap= BitmapFactory.decodeResource(getResources(),R.drawable.unmole2);
+        //Drawable drawable = getResources().getDrawable(R.drawable.unmole2);
+        int imageResource = getResources().getIdentifier("@drawable/unmole2",null,this.getPackageName());
+        Log.i(TAG, "****** int id imageresource " +imageResource);
+        //Bitmap bitmap = ((BitmapDrawable) drawable).getBitmap();
+        bMap= BitmapFactory.decodeResource(getResources(),imageResource);
+        Log.i(TAG, "****** size screen " +screen.size()+" topo size "+img.size()+" topo size empty "+img.size().empty());
+        if( img.size().empty() ){/// refactory para despues: esta logica deberia ir aparte en un construir secuencias o algo asi y por fuera de topo
+            try { ///// PENDIENTE UN refactory para poner todos en un cargarEstados o cargarImagenes o algo asi
+                if( secuenciaEstadosNormal == null ){
+                    Estado unEstado = null;
+                    Map<Integer,Estado> elMapEstados = new HashMap();
+                    List<Mat> lstSecuencia = new ArrayList<Mat>();
+                    List<Mat> lstSecuenciaMask = new ArrayList<Mat>();
+                    //imgMask = Utils.loadResource(this, R.drawable.unmole2mask2, CvType.CV_8UC4);
+                    img = Utils.loadResource(this, R.drawable.topodesaparece1, CvType.CV_8UC4);
+                    imgMask = Utils.loadResource(this, R.drawable.topodesaparecemask, CvType.CV_8UC1); //CV_8UC1  CV_8UC4
+                    unEstado = new Estado(Estado.DESAPARECE,img,imgMask);
+                    elMapEstados.put(unEstado.getIdEstado(),unEstado);
+                    img = Utils.loadResource(this, R.drawable.toposinsalir1, CvType.CV_8UC4);
+                    imgMask = Utils.loadResource(this, R.drawable.toposinsalirmask, CvType.CV_8UC1); //CV_8UC1  CV_8UC4
+                    unEstado = new Estado(Estado.SIN_SALIR,img,imgMask);
+                    elMapEstados.put(unEstado.getIdEstado(),unEstado);
+                    img = Utils.loadResource(this, R.drawable.toposaliendo, CvType.CV_8UC4);
+                    imgMask = Utils.loadResource(this, R.drawable.toposaliendomask, CvType.CV_8UC1); //CV_8UC1  CV_8UC4
+                    unEstado = new Estado(Estado.SALIENDO,img,imgMask);
+                    elMapEstados.put(unEstado.getIdEstado(),unEstado);
+                    img = Utils.loadResource(this, R.drawable.topoafuera1, CvType.CV_8UC4);
+                    imgMask = Utils.loadResource(this, R.drawable.topoafueramask, CvType.CV_8UC1); //CV_8UC1  CV_8UC4
+                    unEstado = new Estado(Estado.AFUERA,img,imgMask);
+                    elMapEstados.put(unEstado.getIdEstado(),unEstado);
+                    img = Utils.loadResource(this, R.drawable.topogolpeado, CvType.CV_8UC4);
+                    imgMask = Utils.loadResource(this, R.drawable.topogolpeadomask, CvType.CV_8UC1); //CV_8UC1  CV_8UC4
+                    unEstado = new Estado(Estado.GOLPEADO,img,imgMask);
+                    elMapEstados.put(unEstado.getIdEstado(),unEstado);
+                    img = Utils.loadResource(this, R.drawable.topoestrellas, CvType.CV_8UC4);
+                    imgMask = Utils.loadResource(this, R.drawable.topoestrellasmask, CvType.CV_8UC1); //CV_8UC1  CV_8UC4
+                    unEstado = new Estado(Estado.ESTRELLAS,img,imgMask);
+                    elMapEstados.put(unEstado.getIdEstado(),unEstado);
+                    secuenciaEstadosNormal = new SecuenciaEstados(SecuenciaEstados.NORMAL);
+                    secuenciaEstadosNormal.setMapEstados(elMapEstados);
+                    secuenciaEstadosNormal.setEstadoActual(secuenciaEstadosNormal.getDesaparece());
+                    secuenciaEstadosGolpe = new SecuenciaEstados(SecuenciaEstados.GOLPE);
+                    secuenciaEstadosGolpe.setMapEstados(elMapEstados);
+                    secuenciaEstadosGolpe.setEstadoActual(secuenciaEstadosGolpe.getDesaparece());
+
+                    lstSecuencia.add(img.clone());
+                    topoPlantilla = new Topo( Estado.DESAPARECE,lstSecuencia);
+                    topoPlantilla.setElEstado(secuenciaEstadosNormal.getDesaparece());
+                    topoPlantilla.setSecuenciaAnimacion(secuenciaEstadosNormal);
+                    int row = 0; int col = rand.nextInt(screen.cols());
+                    topoPlantilla.setCol(col);
+                    topoPlantilla.setRow(row);
+                    topoPlantilla.setLstSecuenciaMask(lstSecuenciaMask);
+                    topoPlantilla.setYaSalio(false);
+                    /////////
+                    cargarListaTopos();
+                }
+                if(lstSecuenciaGolpe == null)cargarSecuenciaGolpe();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        //unTopo = lstTopos.get(0);
+        screen = copiarToposAScreen(screen,diff);
+        return  screen;
+    }
+    private Mat copiarToposAScreen( Mat screen, Mat diff ){
+        Mat img;
+        Mat imgMask;
+        final Mat maskCopyTo = Mat.zeros(screen.size(), CV_8UC1); //
+        for(int i=0;i< nivel.getToposSimultaneos();i++){
+            Topo unTopo = lstTopos.get(i);
+            boolean desactivarLogicaJuego = false; /// para revisar lag de pantalla
+            if ( !desactivarLogicaJuego){
+                //int row = 0; int col = rand.nextInt(current.cols());
+                if( unTopo.getDuracionFrame() > LIMITE_DURACION_FRAME ){////todo: cuando hay golpe esta retencion de 4 frames no aplica, debe ser inmediato
+                    Log.i(TAG, "****** duracionFrame "+duracionFrame+" hayUnAcierto "+hayUnAcierto);
+                    unTopo = mostrarTopoSegunEstado(unTopo);///unTopo.lstSecuencia.get(0);
+                    unTopo.setDuracionFrame(0);
+                } else {
+                    if( unTopo.getImgPintar() == null ){// si es la primera vez, la imagen para pintar es null
+                        unTopo = mostrarTopoSegunEstado(unTopo);///unTopo.lstSecuencia.get(0);
+                    }
+                    unTopo.setDuracionFrame(unTopo.getDuracionFrame()+1);
+                }
+                //frameAnterior = currentCopy.clone();*/
+            }
+            /// se muestra el topo en otro sitio
+            if(unTopo.getSecuenciaAnimacion().isFinalizada()){
+                unTopo.setYaSalio(false);
+                unTopo.setYaTocado(false);
+                unTopo.getSecuenciaAnimacion().setFinalizada(false);////en mostrartopo->secuencia.cambiarEstado tambien se cambia finalizada a true
+                unTopo.setCol(rand.nextInt(DIVISION_PANTALLA_ANCHO)*sextoDeAnchoPantalla); /// entonces si viene true por causa de secuencia.cambio aki se pone false y nunca se va cumplir la condicion para cambiar a secuencia normal
+            }
+            //unTopo.setImgPintar(secuenciaEstadosNormal.getAfuera().getMatImagen());
+            //unTopo.setImgMaskPintar(secuenciaEstadosNormal.getAfuera().getMatImagenMask());
+            img = unTopo.getImgPintar();
+            unTopo.setFrameAnterior(img);
+            imgMask = unTopo.getImgMaskPintar();
+            int col = unTopo.col;int row = unTopo.row;
+
+            Log.i(TAG, "****** size screen intento b47 " +screen.size()+" topo size "+img.size()+" topo size empty "+img.size().empty()+" topo estado "+unTopo.getEstado());
+            //img.copyTo(screen.submat( new Rect( 20,20,img.width(),img.height())));
+            final Mat imgRectROI = new Mat();
+            img.copyTo(maskCopyTo); //
+            //maskCopyTo.copyTo(screen); //
+            if(  col > screen.cols()-img.cols()){
+                col = screen.cols()-img.cols();
+            }
+            Rect roi = new Rect(col,row,img.cols(),img.rows());
+            Mat submat= screen.submat(roi);
+            Mat resizeimageMask = Mat.ones( new Size(submat.rows(),submat.cols()), CV_8UC1); //;
+            Imgproc.circle(resizeimageMask, new Point(submat.rows()/2, submat.cols()/2), 20, Scalar.all(255), 2, 8, 0);
+
+            img.copyTo(submat,imgMask);
+            ultimaDeteccion = detectarToque(diff, roi, unTopo.getIdTopo());
+            if (  ultimaDeteccion == ACIERTO){//// el toque se va procesar sobre la imagen que ya se mostro antes de este frame que se esta construyendo, entonces hay un desfase de un frame
+                //imgUltimoAcierto = screen.clone();/// entre lo que se esta mostrando y lo que se toca
+                hayUnAcierto = true;
+                //duracionFrame = LIMITE_DURACION_FRAME;/// para acelerar/forzar la aparicion de la secuencia de golpe
+            }
+            //actualizarScore(screen); siempre se hace, no depende de que se muestre el topo
+        }
+        //unTopo = lstTopos.get(0);
+
+        return  screen;
+    }
+    /*private Topo mostrarSecuenciaGolpe(){
+        if( unTopo.getEstado() == Estado.GOLPEADO){
+            unTopo.setImgPintar( lstSecuenciaGolpe.get(0));
+            unTopo.setImgMaskPintar( lstSecuenciaGolpeMask.get(0));
+      7      unTopo.setEstadoPrevio(unTopo.getEstado());
+            unTopo.setEstado(Estado.ESTRELLAS);
+        } else if( unTopo.getEstado() == Estado.ESTRELLAS){
+            unTopo.setImgPintar( lstSecuenciaGolpe.get(1));
+            unTopo.setImgMaskPintar( lstSecuenciaGolpeMask.get(1));
+            //unTopo.setEstadoPrevio(unTopo.getEstado());
+            unTopo.setEstado(Estado.INVISIBLE);
+            unTopo.setEstadoPrevio(Estado.SIN_SALIR );
+            //unTopo.setEstadoPrevio(Estado.INVISIBLE);/// machetin para provocar que termine de la misma forma que la secuencia normal o generica
+            //unTopo.setEstado(Estado.DESAPARECE); /// el yasalio sirve en combinacion con el machetin del estado previo invisible
+            unTopo.setYaSalio(true);/// se coloca en este estado que es el ultimo de la secuencia de golpe con eso se evita el error de mostrar el estado estrellas en proximo random
+        }
+        return unTopo;
+    }*/
+    private void cargarListaTopos(){
+        if ( lstTopos == null){
+            lstTopos = new ArrayList<Topo>();
+        }
+        int velocidad = 1; int cantidadTopos = 10; int toposSimultaneos = 4;
+        if ( nivel == null ){
+            nivel = new Nivel(velocidad, cantidadTopos, toposSimultaneos);
+            nivel.setIdNivel(1);
+            nivel.setToposSimultaneos(1);
+        }
+        for(int i= 0; i< LIMITE_LISTA_TOPOS; i++){
+            if( sextoDeAnchoPantalla == 0 ){
+                sextoDeAnchoPantalla = mRgba.cols()/DIVISION_PANTALLA_ANCHO;
+            }
+            int row = 0; int col = rand.nextInt(DIVISION_PANTALLA_ANCHO)*sextoDeAnchoPantalla;
+            topoPlantilla.setCol(col);
+            topoPlantilla.setRow(row);
+            Topo nuevoTopo = topoPlantilla.copiar(topoPlantilla);
+            nuevoTopo.setIdTopo(i);
+            lstTopos.add( nuevoTopo );
+        }
+    }
+    private void cargarSecuenciaGolpe(){
+        try {
+            lstSecuenciaGolpe = new ArrayList<Mat>();
+            lstSecuenciaGolpeMask = new ArrayList<Mat>();
+            Mat img;
+            Mat imgMask;
+            imgMask = Utils.loadResource(this, R.drawable.topogolpeadomask, CvType.CV_8UC1); //CV_8UC1  CV_8UC4
+            lstSecuenciaGolpeMask.add(imgMask.clone());
+            imgMask = Utils.loadResource(this, R.drawable.topoestrellasmask, CvType.CV_8UC1); //CV_8UC1  CV_8UC4
+            lstSecuenciaGolpeMask.add(imgMask.clone());
+            img = Utils.loadResource(this, R.drawable.topogolpeado, CvType.CV_8UC4);
+            lstSecuenciaGolpe.add(img.clone());
+            img = Utils.loadResource(this, R.drawable.topoestrellas, CvType.CV_8UC4);
+            lstSecuenciaGolpe.add(img.clone());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    private Topo mostrarTopoSegunEstado(Topo unTopo ){
+        Mat img = null;
+        Log.i(TAG, "****** case unTopo.getSecuenciaAnimacion()  "+unTopo.getSecuenciaAnimacion());
+        Log.i(TAG, "****** case el estado secuencia "+unTopo.getSecuenciaAnimacion().getEstadoActual().idEstado+" idSecuencia "+unTopo.getSecuenciaAnimacion().getIdSecuencia()+" finalizada "+unTopo.getSecuenciaAnimacion().isFinalizada());
+        unTopo.setImgPintar(unTopo.getSecuenciaAnimacion().getEstadoActual().getMatImagen());
+        unTopo.setImgMaskPintar(unTopo.getSecuenciaAnimacion().getEstadoActual().getMatImagenMask());
+        unTopo.getSecuenciaAnimacion().cambiarASiguienteEstado();
+        //img = unTopo.lstSecuencia.get(0);
+        Log.i(TAG, "****** case resultado estado "+unTopo.getEstado()+" estado previo "+unTopo.getEstadoPrevio());
+        Mat imgResize = new Mat();
+        resize(unTopo.getImgPintar().clone(), imgResize,new Size(100,100));
+        Mat imgMaskResize = new Mat();
+        resize(unTopo.getImgMaskPintar().clone(), imgMaskResize,new Size(100,100));
+        Imgproc.cvtColor(imgResize, imgResize, Imgproc.COLOR_RGB2BGRA);///Imgproc.COLOR_BGR2RGB /// con este ajuste no se ve de color azul, toca ajustar al contrario para cuando se va compartir por whatsapp
+        unTopo.setImgPintar(imgResize);
+        unTopo.setImgMaskPintar(imgMaskResize);
+        //this.unTopo = unTopo;
+        //return  imgResize;
+        return unTopo;
+    }
+    private Mat mostrarTopoSegunEstadoOld(Topo unTopo, Mat img ){
+        Log.i(TAG, "****** case estado "+unTopo.getEstado()+" estado previo "+unTopo.getEstadoPrevio());
+        switch ( unTopo.getEstado()){
+            case Estado.INVISIBLE:
+                Log.i(TAG, "****** case invisble estado previo "+unTopo.getEstadoPrevio());
+                if( unTopo.getEstadoPrevio() == Estado.INICIO ){
+                    unTopo.setEstado(Estado.SIN_SALIR);
+                    unTopo.setEstadoPrevio(Estado.INVISIBLE);
+                    img = unTopo.lstSecuencia.get(Estado.SIN_SALIR);
+                } else {
+                    Log.i(TAG, "****** case invisble estado previo "+unTopo.getEstadoPrevio());
+                    unTopo.setEstado(Estado.DESAPARECE);
+                    unTopo.setEstadoPrevio(Estado.INVISIBLE);
+                    img = unTopo.lstSecuencia.get(Estado.INVISIBLE);
+                }
+                break;
+            case Estado.SIN_SALIR:
+                //Log.i(TAG, "****** case sin salir");
+                if(unTopo.getEstadoPrevio() == Estado.INVISIBLE){
+                    unTopo.setEstado(Estado.SALIENDO);
+                    unTopo.setEstadoPrevio(Estado.SIN_SALIR);
+                    img = unTopo.lstSecuencia.get(Estado.SALIENDO);
+                } else {
+                    unTopo.setEstado(Estado.INVISIBLE);
+                    unTopo.setEstadoPrevio(Estado.SALIENDO);
+                    img = unTopo.lstSecuencia.get(Estado.SALIENDO);
+                }
+                break;
+            case Estado.SALIENDO:
+                //Log.i(TAG, "****** case saliendo");
+                if( unTopo.getEstadoPrevio() == Estado.SIN_SALIR){
+                    unTopo.setEstado(Estado.AFUERA);
+                    unTopo.setEstadoPrevio(Estado.SALIENDO);
+                    img = unTopo.lstSecuencia.get(Estado.AFUERA);
+                } else {
+                    unTopo.setEstado(Estado.SIN_SALIR);
+                    unTopo.setEstadoPrevio(Estado.AFUERA);
+                    img = unTopo.lstSecuencia.get(Estado.AFUERA);
+                }
+                break;
+            case Estado.AFUERA:
+                //Log.i(TAG, "****** case afuera");
+                unTopo.setEstado(Estado.SALIENDO);
+                unTopo.setEstadoPrevio(Estado.AFUERA );
+                img = unTopo.lstSecuencia.get(Estado.AFUERA);
+                break;
+            case Estado.DESAPARECE:
+                Log.i(TAG, "****** case desaparece");
+                unTopo.setEstado(Estado.DESAPARECE);
+                unTopo.setEstadoPrevio(Estado.INVISIBLE );
+                img = unTopo.lstSecuencia.get(Estado.INVISIBLE);
+                break;
+            default: unTopo.setEstado(Estado.SIN_SALIR);
+                //Log.i(TAG, "****** case default");
+                unTopo.setEstadoPrevio(Estado.INVISIBLE);
+                img = unTopo.lstSecuencia.get(Estado.SIN_SALIR); ;break;
+        }
+        Mat imgResize = new Mat();
+        resize(img, imgResize,new Size(100,100));
+        Imgproc.cvtColor(imgResize, imgResize, Imgproc.COLOR_RGB2BGRA);///Imgproc.COLOR_BGR2RGB
+        //this.unTopo = unTopo;
+        return  imgResize;
+    }
+    private void testVolumen(){
+        MediaPlayer mp = MediaPlayer.create(this, R.raw.whack);
+        int maxVolume = 50;
+        int currVolume = -6;
+        try {
+            for(int i = 0 ;i < 10; i++){
+                currVolume++;
+                float log1=(float)(Math.log(maxVolume-currVolume)/Math.log(maxVolume));
+                float volumen = 1-log1;
+                //mp.setVolume(volumen,volumen);
+                mp.setVolume(volumen,volumen);
+                mp.start();
+                i++;
+                Thread.sleep(500);
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+    private int detectarToque( Mat diff, Rect roiImage, int indiceTopo){
+        //Mat submatDiff= diff.submat(0,img.rows(),0, img.cols() );
+        Mat submatDiff= diff.submat( roiImage);
+        int elAcierto = FALLA;
+        if(  Core.countNonZero(submatDiff) > 0 ){
+            int maxVolume = 50;
+            int currVolume = 1;
+            boolean sonidoActivado = true;
+            Topo  unTopo;
+            final SharedPreferences prefs =
+                    this.getSharedPreferences("molegame", Context.MODE_PRIVATE);
+            String prefVolume = prefs.getString("volume","off");
+            Log.i(TAG, "****** prefvolume "+prefVolume);
+            sonidoActivado = (prefVolume.equals("on"))?true:false;
+            MediaPlayer mp = MediaPlayer.create(this, R.raw.whack);
+            float log1=(float)(Math.log(maxVolume-currVolume)/Math.log(maxVolume));
+            float volumen = 1-log1;
+            //mp.setVolume(volumen,volumen);
+            //sonidoActivado = true;
+            mp.setVolume(0.00f,0.00f);
+            //for(int i =0; i < nivel.getToposSimultaneos();i++ ){
+                unTopo = lstTopos.get(indiceTopo);
+                int unEstado =  unTopo.getSecuenciaAnimacion().getEstadoActual().idEstado;
+                if( unEstado == Estado.SALIENDO ||  unEstado == Estado.AFUERA ){
+                    //if(unTopo.getEstado()== Estado.SALIENDO)toques++;
+                    //if(unTopo.getEstado()== Estado.AFUERA)toques+=2;
+                    //unTopo.setEstado(Estado.GOLPEADO);
+                    if( unEstado == Estado.SALIENDO)toques++;
+                    if( unEstado == Estado.AFUERA)toques+=2;
+                    //reiniciarSecuencia( unTopo.getSecuenciaAnimacion());
+                    //unTopo.setSecuenciaAnimacion(secuenciaEstadosGolpe);
+                    unTopo.getSecuenciaAnimacion().setIdSecuencia(SecuenciaEstados.GOLPE);
+                    //Log.i(TAG, "****** secuenciaEstadosGolpe "+unTopo.getSecuenciaAnimacion()+" secuenciaEstadosGolpe.estadoActual id"+unTopo.getSecuenciaAnimacion().getEstadoActual().idEstado);
+                    mp = MediaPlayer.create(this, R.raw.whack);
+                    //imgUltimoAcierto = mRgba.clone();
+                    if(sonidoActivado)mp.start();
+                    elAcierto = ACIERTO;
+                } else if(unTopo.getEstado() == Estado.SIN_SALIR ){
+                    mp = MediaPlayer.create(this, R.raw.wrong);
+                    if(sonidoActivado)mp.start();
+                }
+            //}
+            //return elAcierto;
+        } else {
+            elAcierto = NADA;
+        }
+        //elAcierto = NADA;
+        return elAcierto;
+    }
+    public void reiniciarSecuencia( SecuenciaEstados secuenciaEstados){
+        secuenciaEstados.setEstadoActual(secuenciaEstados.getDesaparece());
+        secuenciaEstados.setFinalizada(true);
+    }
+    public void onClickShare(View view){
+
+        //Bitmap bitmap =getBitmapFromView(view);
+        Log.i(TAG, "****** en onclickshare 1");
+        //Bitmap bitmap =getBitmapFromMat();
+        Bitmap bitmap = bitmapForShare;
+        //Bitmap bitmap =getBitmapScreenShoot();
+        //Bitmap bitmap =getBitmapFromView(findViewById(R.id.main_layout));
+        Log.i(TAG, "****** en onclickshare height "+bitmap.getHeight());
+        try {
+            //File file = new File(this.getExternalCacheDir(),File.separator+ "logicchip.png");
+            File file = new File(this.getExternalCacheDir(),"logicchip.png");
+            // File file = new File(this.getCacheDir(),File.separator+ "logicchip.png");
+            FileOutputStream fOut = new FileOutputStream(file);
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, fOut);
+            fOut.flush();
+            fOut.close();
+            file.setReadable(true, false);
+            final Intent intent = new Intent(android.content.Intent.ACTION_SEND);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            intent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(file));
+            ///////
+            String urlJuego ="fdbgames";
+            String shareBody = "Te reto a que superes mi puntaje, descargalo en "+urlJuego;
+            //Intent sharingIntent = new Intent(android.content.Intent.ACTION_SEND);
+            intent.setType("text/plain");
+            intent.putExtra(android.content.Intent.EXTRA_SUBJECT, "smash mole game AR");
+            intent.putExtra(android.content.Intent.EXTRA_TEXT, shareBody);
+            ///////
+            intent.setType("image/png");
+            //startActivity(Intent.createChooser(intent, "Share image via"));
+            startActivityForResult(Intent.createChooser(intent, "Share image via"),CODE_FOR_RESULT);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    public void guardarImagenUltimoACierto(){
+        //Bitmap bitmap =getBitmapFromView(view);
+        Log.i(TAG, "****** en guardarImagenUltimoACierto 1 toques "+toques);
+        bitmapForShare =getBitmapFromMat();
+    }
+    private void captureBitmap(){
+        /*Mat mBitmap = new Mat(null);
+        Bitmap bitmap = Bitmap.createBitmap(mOpenCvCameraView.getWidth()/4,mOpenCvCameraView.getHeight()/4, Bitmap.Config.ARGB_8888);
+        try {
+            bitmap = Bitmap.createBitmap(mRgba.cols(), mRgba.rows(), Bitmap.Config.ARGB_8888);
+            Utils.matToBitmap(mRgba, bitmap);
+            mBitmap.setImageBitmap(bitmap);
+            mBitmap.invalidate();
+        }catch(Exception ex){
+            System.out.println(ex.getMessage());
+        }*/
+    }
+    //create bitmap from view and returns it
+    private Bitmap getBitmapFromView(View view) {
+        //Define a bitmap with the same size as the view
+        //Bitmap returnedBitmap = Bitmap.createBitmap(view.getWidth(), view.getHeight(),Bitmap.Config.ARGB_8888);
+        Bitmap returnedBitmap = Bitmap.createBitmap(view.getWidth(), view.getHeight(),Bitmap.Config.ARGB_8888);
+        //Bind a canvas to it
+        Canvas canvas = new Canvas(returnedBitmap);
+        //Get the view's background
+        Drawable bgDrawable =view.getBackground();
+        if (bgDrawable!=null) {
+            //has background drawable, then draw it on the canvas
+            bgDrawable.draw(canvas);
+        }   else{
+            //does not have background drawable, then draw white background on the canvas
+            canvas.drawColor(Color.WHITE);
+        }
+        // draw the view on the canvas
+        view.draw(canvas);
+        //return the bitmap
+        return returnedBitmap;
+    }
+    //create bitmap from view and returns it
+    private Bitmap getBitmapFromMat() {
+        Log.i(TAG, "****** en getBitmapFromMat 11  ");
+        Mat matLocal = imgUltimoAcierto;//mRgba.clone();
+        //Define a bitmap with the same size as the view
+        //Bitmap returnedBitmap = Bitmap.createBitmap(view.getWidth(), view.getHeight(),Bitmap.Config.ARGB_8888);
+        int height = matLocal.height();//unTopo.getImgPintar().height();
+        int width = matLocal.width();//unTopo.getImgPintar().width();
+        //Mat tmp = new Mat (height, width, CvType.CV_8UC1, new Scalar(4));
+        Mat tmp = new Mat (height, width, CvType.CV_8UC1 );
+        //2) Imgproc.cvtColor can change the dimensions of the tmp object. So it is safe to create a bitmap after the color conversion:
+
+        Bitmap bmp = null;
+        //Mat tmp = new Mat (height, width, CvType.CV_8U, new Scalar(4));
+        try {
+            Imgproc.cvtColor(matLocal, matLocal, Imgproc.COLOR_BGRA2RGB);
+            //Imgproc.cvtColor(matLocal, tmp, Imgproc.COLOR_BGRA2RGB);
+            //Imgproc.cvtColor(matLocal, tmp, Imgproc.COLOR_RGB2BGR);/// asi COLOR_BGRA2RGB mostro el verde
+            //Imgproc.cvtColor(mRgba, tmp, Imgproc.COLOR_RGB2BGRA);/// el que esta en mostrar topo es COLOR_RGB2BGRA
+            //Imgproc.cvtColor(mRgba, tmp, Imgproc.COLOR_BGRA2RGB, 4);/// este funciona casi, queda de color azul
+            //Imgproc.cvtColor(mRgba, tmp, Imgproc.COLOR_BGRA2RGB, 4);
+            //bmp = Bitmap.createBitmap(tmp.cols(), tmp.rows(), Bitmap.Config.ARGB_8888);
+            bmp = Bitmap.createBitmap(matLocal.cols(), matLocal.rows(), Bitmap.Config.ARGB_8888);
+            Utils.matToBitmap(matLocal, bmp);
+            bmp = swapRed2blue(bmp);/// esta jugada es la que puede demorar en procesamiento
+        }
+        catch (CvException e){
+            Log.d("Exception",e.getMessage());
+            e.printStackTrace();
+        }
+
+        //return the bitmap
+        return bmp;
+    }
+    private Bitmap swapRed2blue( Bitmap bitmap ){
+        int[] pixels = new int[bitmap.getWidth() * bitmap.getHeight()];
+        bitmap.getPixels(pixels, 0, bitmap.getWidth(), 0, 0, bitmap.getWidth(), bitmap.getHeight());
+        int len = bitmap.getWidth() * bitmap.getHeight();
+
+        ////////////////
+        //int[] pixels = new int[bitmap.getWidth() * bitmap.getHeight()];
+        //bitmap.getPixels(pixels, 0, bitmap.getWidth(), 0, 0, bitmap.getWidth(), bitmap.getHeight());
+
+        int[] finalArray = new int[bitmap.getWidth() * bitmap.getHeight()];
+
+        for(int i = 0; i < len; i++) {
+
+            int red = Color.red(pixels[i]);
+            int green = Color.green(pixels[i]);
+            int blue = Color.blue(pixels[i]);
+            finalArray[i] = Color.rgb(blue, green, red);//invert sequence here.
+        }
+        bitmap.setPixels( finalArray, 0, bitmap.getWidth(), 0, 0, bitmap.getWidth(), bitmap.getHeight());
+        return bitmap;
+        //len = bitmap.getWidth() * bitmap.getHeight();
+        //onFacebookImageNative(pixels, len, bitmap.getWidth(), bitmap.getHeight(), bitsPerComponent);
+    }
+    private Bitmap getBitmapScreenShoot() {
+        Log.i(TAG, "****** en getBitmapScreenShoot 3");
+        // create bitmap screen capture
+        View v1 = getWindow().getDecorView().getRootView();
+        v1.setDrawingCacheEnabled(true);
+        Bitmap bitmap = Bitmap.createBitmap(v1.getDrawingCache());
+        v1.setDrawingCacheEnabled(false);
+
+        //return the bitmap
+        return bitmap;
+    }
+    private void actualizarScore( Mat screen){
+        float size = 2.0f;
+        Imgproc.putText(screen, "6"+getString(R.string.score)+" "+toques,
+                new Point(screen.width()*0.5, screen.height()*0.7),
+                face[3], size, new Scalar(0,255,0),3,1);
+    }
+    private void mostrarNivel ( Mat screen){
+        float size = 2.0f;
+        if( nivel != null ){
+            Imgproc.putText(screen, ""+getString(R.string.level)+" "+nivel.getIdNivel(),
+                    new Point(screen.width()*0.2, screen.height()*0.8),
+                    face[3], size, new Scalar(0,255,0),3,1);
+        }
+    }
+    private void mostrarMensajeEspera( Mat screen){
+        float size = 5.0f;
+        if( enEspera){
+            long millis = System.currentTimeMillis() - inicioEspera;
+            int seconds = (int) (millis / 1000);
+            seconds = SEGUNDOS_ESPERA_LIMITE -seconds;
+            Imgproc.putText(screen, ""+seconds,
+                    new Point(screen.width()*0.5, screen.height()*0.5),
+                    face[3], size, new Scalar(255,100,0),3,1);
+        }
+    }
+    private void mostrarMensajeAciertoOError( Mat screen ){
+        String mensaje= MSG_VACIO;
+        if( duracionMensaje > LIMITE_DURACION_MENSAJE){
+            if( ultimaDeteccion != NADA  ){
+                mensaje = (ultimaDeteccion == ACIERTO )?MSG_ACIERTO:(ultimaDeteccion == FALLA )?MSG_FALLA:MSG_VACIO;
+                float size = 3.0f;
+                Scalar red = new Scalar(255,0,0);
+                Scalar green = new Scalar(0,255,0);
+                Scalar color = (ultimaDeteccion == ACIERTO )?green:red;
+                //String mensaje = (ultimaDeteccion == ACIERTO )?MSG_ACIERTO:(ultimaDeteccion == FALLA )?MSG_FALLA:MSG_VACIO;
+                Imgproc.putText(screen, mensaje,
+                        new Point(screen.width()*0.5, screen.height()*0.5),
+                        face[3], size, color,3,1);
+                duracionMensaje = 0;
+            }
+            ultimoMensaje = (ultimaDeteccion == ACIERTO )?MSG_ACIERTO:(ultimaDeteccion == FALLA )?MSG_FALLA:MSG_VACIO;
+        } else {
+            if( ultimoMensaje == null ){
+                ultimoMensaje = (ultimaDeteccion == ACIERTO )?MSG_ACIERTO:(ultimaDeteccion == FALLA )?MSG_FALLA:MSG_VACIO;
+            }
+            float size = 3.0f;
+            Scalar red = new Scalar(255,0,0);
+            Scalar green = new Scalar(0,255,0);
+            Scalar color = (ultimoMensaje.equals(MSG_ACIERTO) )?green:red;
+            //String mensaje = (ultimaDeteccion == ACIERTO )?MSG_ACIERTO:(ultimaDeteccion == FALLA )?MSG_FALLA:MSG_VACIO;
+            Imgproc.putText(screen, ultimoMensaje,
+                    new Point(screen.width()*0.5, screen.height()*0.5),
+                    face[3], size, color,3,1);
+            duracionMensaje++;
+        }
+        /*
+            if( duracionFrame > 4 ){
+                mostrarTopoSegunEstado(unTopo);///unTopo.lstSecuencia.get(0);
+                duracionFrame = 0;
+            } else {
+                if( unTopo.getImgPintar() == null ){// si es la primera vez, la imagen para pintar es null
+                    mostrarTopoSegunEstado(unTopo);///unTopo.lstSecuencia.get(0);
+                }
+                duracionFrame++;
+            }
+         */
+    }
+    private void mostrarTiempo( Mat screen){
+        //Mat copyScreen = screen.clone();
+        if ( textTime == null){
+            textTime = ""+SEGUNDOS_LIMITE;
+        }
+        if( textTime.contains("-")){
+            textTime = String.format("%d:%02d", 0, 0);
+        }
+        Imgproc.putText(screen, ""+getString(R.string.time)+" "+textTime,
+                new Point(screen.width()*0.5,screen.height()*0.2),
+                face[3], 2.0, new Scalar(0,255,0),3,1);
+        //return copyScreen;
+    }
+    /**Mat m = ... // your smaller mat
+     Mat submat= matOrig.submat(new Rect(x,y, m.cols(), m.rows()) );
+     m.copyTo(submat);
+     * **/
+    public static Mat RectangleSubROI(Mat input, Rect rect) {
+        final Mat maskCopyTo = Mat.zeros(input.size(), CV_8UC1); // ����copyTo������mask����С��ԭͼ����һ��
+        // floodFill��mask��width��height�����������ͼ��������������أ��������ᱨ��
+        final Mat maskFloodFill = Mat.zeros(new Size(input.cols() + 2, input.rows() + 2), CV_8UC1); // ����floodFill������mask���ߴ��ԭͼ��һЩ
+        // Imgproc.circle(maskCopyTo, new Point(cc.x, cc.y), radius, Scalar.all(255), 2,
+        // 8, 0); // ����Բ������
+        Imgproc.rectangle(maskCopyTo, rect.tl(), rect.br(), Scalar.all(255), 2, 8, 0);
+        Imgproc.floodFill(maskCopyTo, maskFloodFill,
+                new Point((rect.tl().x + rect.br().x) / 2, (rect.tl().y + rect.br().y) / 2), Scalar.all(255), null,
+                Scalar.all(20), Scalar.all(20), 4); // ��ˮ��䷨���Բ���ڲ�
+        // MatView.imshow(maskFloodFill, "Mask of floodFill"); // ����floodFill������mask
+        // MatView.imshow(maskCopyTo, "Mask of copyTo"); // ����copyTo������mask
+        final Mat imgRectROI = new Mat();
+        input.copyTo(imgRectROI, maskCopyTo); // ��ȡԲ�ε�ROI
+        // MatView.imshow(imgCircularROI, "Circular ROI"); // ��ʾԲ�ε�ROI
+        return imgRectROI;
+    }
+    public Mat hasChanges2(Mat current) {
+        int PIXEL_DIFF_THRESHOLD = 5;
+        int IMAGE_DIFF_THRESHOLD = 5;
+        //Mat base = new Mat();
+        Log.i(TAG, "****** en hasChanges ");
+        Mat bg = new Mat();
+        Mat cg = new Mat();
+        Mat diff = new Mat();
+        Mat tdiff = new Mat();
+        if (base == null) {
+            base = current.clone();
+            return current;
+        }
+        Imgproc.cvtColor(base, bg, Imgproc.COLOR_BGR2GRAY);
+        Imgproc.cvtColor(current, cg, Imgproc.COLOR_BGR2GRAY);
+        Core.absdiff(bg, cg, diff);
+        Imgproc.threshold(diff, tdiff, PIXEL_DIFF_THRESHOLD, 0.0, Imgproc.THRESH_TOZERO);
+        if (Core.countNonZero(tdiff) <= IMAGE_DIFF_THRESHOLD) {
+            return current;
+        }
+        Imgproc.threshold(diff, diff, PIXEL_DIFF_THRESHOLD, 255, Imgproc.THRESH_BINARY);
+        Imgproc.dilate(diff, diff, new Mat());
+        //Mat se = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(5,5));
+        //Imgproc.morphologyEx(diff, diff, Imgproc.MORPH_CLOSE, se);
+        List<MatOfPoint> points = new ArrayList<MatOfPoint>();
+        Mat contours = new Mat();
+        Imgproc.findContours(diff, points, contours, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
+        int n = 0;
+        for (Mat pm: points) {
+            //log(lvl, "(%d) %s", n++, pm);
+            Log.i(TAG, "****** points " + n+++" "+pm);
+            //printMatI(pm);
+        }
+        //log(lvl, "contours: %s", contours);
+        Log.i(TAG, "****** countours " +contours);
+        //printMatI(contours);
+        //the largest contour is found at the end of the contours vector
+        //we will simply assume that the biggest contour is the object we are looking for.
+        //vector< vector<Point> > largestContourVec;
+        //largestContourVec.push_back(contours.at(contours.size()-1));
+        MatOfPoint largestContour = points.get(points.size()-1);
+        Point[] cornerpoints = points.get(points.size()-1).toArray();
+        //double x = cornerpoints[0].x;
+        //double y = ;
+        //Core.rectangle(current,);
+        // Get bounding rect of contour
+        Rect rect = Imgproc.boundingRect(largestContour);
+
+        // draw enclosing rectangle (all same color, but you could use variable i to make them unique)
+        rectangle(current, new Point(rect.x,rect.y), new Point(rect.x+rect.width
+                ,rect.y+rect.height), new Scalar(255, 0, 0, 255), 3);
+        Scalar color =  new Scalar( 255, 255, 0 );
+        Imgproc.drawContours( current, points,-1,color,3);
+        base = current.clone();
+        return current;
+    }
+
+    public Mat hasChanges2a(Mat current) {
+        int PIXEL_DIFF_THRESHOLD = 5;
+        int IMAGE_DIFF_THRESHOLD = 5;
+        //Mat base = new Mat();
+        Log.i(TAG, "****** en hasChanges ");
+        Mat bg = new Mat();
+        Mat cg = new Mat();
+        Mat diff = new Mat();
+        Mat tdiff = new Mat();
+        if (base == null) {
+            base = current.clone();
+            return current;
+        }
+        Imgproc.cvtColor(base, bg, Imgproc.COLOR_BGR2GRAY);
+        Imgproc.cvtColor(current, cg, Imgproc.COLOR_BGR2GRAY);
+        Core.absdiff(bg, cg, diff);
+        Imgproc.threshold(diff, tdiff, PIXEL_DIFF_THRESHOLD, 0.0, Imgproc.THRESH_TOZERO);
+        if (Core.countNonZero(tdiff) <= IMAGE_DIFF_THRESHOLD) {
+            return current;
+        }
+        Imgproc.threshold(diff, diff, PIXEL_DIFF_THRESHOLD, 255, Imgproc.THRESH_BINARY);
+        Imgproc.dilate(diff, diff, new Mat());
+        Mat se = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(5,5));
+        Imgproc.morphologyEx(diff, diff, Imgproc.MORPH_CLOSE, se);
+        List<MatOfPoint> points = new ArrayList<MatOfPoint>();
+        Mat contours = new Mat();
+        Imgproc.findContours(diff, points, contours, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
+        int n = 0;
+        for (Mat pm: points) {
+            //log(lvl, "(%d) %s", n++, pm);
+            Log.i(TAG, "****** points " + n+++" "+pm);
+            //printMatI(pm);
+        }
+        //log(lvl, "contours: %s", contours);
+        Log.i(TAG, "****** countours " +contours);
+        //printMatI(contours);
+        //the largest contour is found at the end of the contours vector
+        //we will simply assume that the biggest contour is the object we are looking for.
+        //vector< vector<Point> > largestContourVec;
+        //largestContourVec.push_back(contours.at(contours.size()-1));
+        MatOfPoint largestContour = points.get(points.size()-1);
+        Point[] cornerpoints = points.get(points.size()-1).toArray();
+        //double x = cornerpoints[0].x;
+        //double y = ;
+        //Core.rectangle(current,);
+        // Get bounding rect of contour
+        Rect rect = Imgproc.boundingRect(largestContour);
+
+        // draw enclosing rectangle (all same color, but you could use variable i to make them unique)
+        rectangle(current, new Point(rect.x,rect.y), new Point(rect.x+rect.width
+                ,rect.y+rect.height), new Scalar(255, 0, 0, 255), 3);
+        Scalar color =  new Scalar( 255, 255, 255 );
+        Imgproc.drawContours( current, points,-1,color,3);
+        base = current.clone();
+        return current;
+    }
+
+    public MainActivity() {
+        Log.i(TAG, "Instantiated new " + this.getClass());
+    }
+    final int MY_PERMISSIONS_REQUEST_READ_CONTACTS = 1;
+    /** Called when the activity is first created. */
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        Log.i(TAG, "****** called onCreate v33 ");
+        // Here, thisActivity is the current activity
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            // Should we show an explanation?
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                    Manifest.permission.CAMERA)) {
+
+                // Show an expanation to the user *asynchronously* -- don't block
+                // this thread waiting for the user's response! After the user
+                // sees the explanation, try again to request the permission.
+
+            } else {
+
+                // No explanation needed, we can request the permission.
+
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.CAMERA},
+                        MY_PERMISSIONS_REQUEST_READ_CONTACTS);
+
+                // MY_PERMISSIONS_REQUEST_READ_CONTACTS is an
+                // app-defined int constant. The callback method gets the
+                // result of the request.
+            }
+        }
+        super.onCreate(savedInstanceState);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+
+        setContentView(R.layout.activity_main);
+
+        mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.tutorial1_activity_java_surface_view);
+
+        mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
+
+        mOpenCvCameraView.setCvCameraViewListener(this);
+
+        botonStart = findViewById(R.id.buttonStart);
+        botonShare = findViewById(R.id.buttonShare);
+        botonStart.setText("Start");
+        botonStart.setOnClickListener(this);
+        botonShare.setOnClickListener(this);
+        botonShare.setVisibility(View.GONE  );
+        inicializarBotonesNiveles();
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        //////
+        final SharedPreferences prefs = getSharedPreferences("molegame", Context.MODE_PRIVATE);
+        int ultimoNivelSuperado = prefs.getInt(ULTIMO_NIVEL_SUPERADO, 0);
+        layoutNiveles = findViewById(R.id.layoutNiveles);
+        if( ultimoNivelSuperado == 0 ){
+            layoutNiveles.setVisibility(View.GONE);
+        }
+        //cargarSecuenciaGolpe();
+    }
+    private void inicializarBotonesNiveles(){
+        Button botonNivel1 = findViewById(R.id.level1);
+        Button botonNivel2 = findViewById(R.id.level2);
+        Button botonNivel3 = findViewById(R.id.level3);
+        Button botonNivel4 = findViewById(R.id.level4);
+        Button botonNivel5 = findViewById(R.id.level5);
+        Button botonNivel6 = findViewById(R.id.level6);
+        Button botonNivel7 = findViewById(R.id.level7);
+        Button botonNivel8 = findViewById(R.id.level8);
+        botonNivel1.setOnClickListener(this);
+        botonNivel2.setOnClickListener(this);
+        botonNivel3.setOnClickListener(this);
+        botonNivel4.setOnClickListener(this);
+        botonNivel5.setOnClickListener(this);
+        botonNivel6.setOnClickListener(this);
+        botonNivel7.setOnClickListener(this);
+        botonNivel8.setOnClickListener(this);
+    }
+    private int getFrontCameraId(){
+        int camId = -1;
+        //int numberOfCameras = new Camera2
+        /*Camera.CameraInfo ci = new Camera.CameraInfo();
+
+        for(int i = 0;i < numberOfCameras;i++){
+            Camera.getCameraInfo(i,ci);
+            if(ci.facing == Camera.CameraInfo.CAMERA_FACING_FRONT){
+                camId = i;
+            }
+        }*/
+
+        return camId;
+    }
+
+    @Override
+    public void onPause()
+    {
+        super.onPause();
+        if (mOpenCvCameraView != null)
+            mOpenCvCameraView.disableView();
+    }
+
+    @Override
+    public void onResume()
+    {
+        super.onResume();
+        if (!OpenCVLoader.initDebug()) {
+            Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_11, this, mLoaderCallback);
+        } else {
+            Log.d(TAG, "OpenCV library found inside package. Using it!");
+            mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+        }
+    }
+
+    public void onDestroy() {
+        super.onDestroy();
+        if (mOpenCvCameraView != null)
+            mOpenCvCameraView.disableView();
+    }
+
+    private Mat mFiltrada = null;
+    public void onCameraViewStarted(int width, int height) {
+        if ( mFiltrada == null){
+            mFiltrada = new Mat(width, height, CvType.CV_8UC2);
+        }
+    }
+
+    public void onCameraViewStopped() {
+        if (mFiltrada != null){
+            mFiltrada.release();
+        }
+    }
+
+    public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
+        mRgba = inputFrame.rgba();
+        /*if( mFiltrada != null){
+            Imgproc.Canny();
+        } else {
+            return inputFrame.rgba();
+        }*/
+        //mGray = inputFrame.gray();
+        boolean flipado = false;
+        //testVolumen();
+        if(inicioJuego && !endGame){
+            mRgba =  hasChanges3(mRgba);
+            flipado = true;///se flipea dentro del haschanges
+        } else if ( !inicioJuego){
+            flip(mRgba,mRgba,1);
+            flipado = true;
+        } else if( endGame && botonStart != null ){
+            // botonStart.setText("New Game");
+            // botonStart.setVisibility(View.VISIBLE  );
+        }
+        //copiaRgba = mRgba.clone();
+        if( !flipado){
+            flip(mRgba,mRgba,1);
+        }
+        //flip(mRgba,mRgba,1);
+        //mRgba = cambiarCurrent(mRgba);
+        //mRgba = hasChanges2(mRgba);
+        //return inputFrame.rgba();
+        /*LinearLayout gameWidgets = new LinearLayout(this);
+        Button botonStart = new Button(this);
+        botonStart.setText("Start");
+        ArrayList<View> lstTocables = new ArrayList<View>();
+        gameWidgets.addView(botonStart);
+        lstTocables.add(gameWidgets);
+        mOpenCvCameraView.addTouchables(lstTocables);
+        //mOpenCvCameraView.addv*/
+        mostrarTiempo(mRgba);
+        actualizarScore(mRgba);
+        mostrarMensajeEspera(mRgba);
+        mostrarMensajeAciertoOError(mRgba);
+        mostrarNivel(mRgba);
+        if( hayUnAcierto ){
+            imgUltimoAcierto = mRgba.clone();
+            //guardarImagenUltimoACierto();
+            hayUnAcierto = false;
+            //mRgba =  hasChanges3(mRgba);/// se llama mostrar el topo aki para que sea mas inmediata la retroalimentacion de la animacion
+            flipado = true;///se flipea dentro del haschanges
+        }
+        return mRgba;
+    }
+    private void ocultarBotonesMenu(){
+        layoutNiveles.setVisibility(View.GONE);
+    }
+    private void  inicializarNivel( int toposSimultaneos, int idNivel ){
+        int velocidad = 1; int cantidadTopos = toposSimultaneos;
+        if ( nivel == null ){
+            nivel = new Nivel(velocidad, cantidadTopos, toposSimultaneos);
+        }
+        nivel.setIdNivel(idNivel);
+        nivel.setToposSimultaneos(toposSimultaneos);
+        ocultarBotonesMenu();
+        nivelEscogido = true;
+    }
+    private ImageButton agregarBotonShare(){
+        int height = 100;
+        int width = 100;
+        Bitmap bmp;
+        bmp = BitmapFactory.decodeResource(getResources(), R.drawable.btnshare);
+        bmp = Bitmap.createScaledBitmap(bmp, width, height, true);
+        ImageButton imageButton = new ImageButton(this);
+        imageButton.setImageBitmap(bmp);
+        imageButton.setBackgroundColor(Color.TRANSPARENT);
+        return  imageButton;
+    }
+    @Override
+    public void onClick(View view) {
+        switch (view.getId()) {
+
+            case R.id.buttonStart:
+                // do your code
+                //inicioJuego = true;
+                //startTime = System.currentTimeMillis();
+                //timerRunnable.run();
+                if( !inicioJuego && ! enEspera){
+                    inicioEspera = System.currentTimeMillis();
+                    timerHandler.postDelayed(timerEsperaRunnable, 3000);
+                    botonStart.setVisibility(View.GONE);
+                    toques = 0;
+                    toolbar.setVisibility(View.GONE);
+                    enEspera = true;
+                    ocultarBotonesMenu();
+                    botonShare.setVisibility(View.GONE  );
+                    nivelEscogido = true;
+                }
+                break;
+
+            case R.id.buttonShare:
+                // do your code
+                onClickShare(findViewById(R.id.tutorial1_activity_java_surface_view));
+                break;
+            case R.id.level1:
+                // do your code
+                inicializarNivel(1,1);
+                break;
+            case R.id.level2:
+                // do your code
+                inicializarNivel(2,2);
+                break;
+            case R.id.level3:
+                // do your code
+                inicializarNivel(4,3);
+                break;
+            case R.id.level4:
+                // do your code
+                inicializarNivel(6,4);
+                break;
+            case R.id.level5:
+                // do your code
+                inicializarNivel(8,5);
+                break;
+            default:
+                break;
+        }
+
+    }
+    @Override
+    public boolean onTouch(View view, MotionEvent motionEvent) {
+        return false;
+    }
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+       /* menu.add("about");
+        menu.add("compartir");
+        return true;*/
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+
+        //menu.add(R.menu.menu_main);
+        return true;
+    }
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+
+        //noinspection SimplifiableIfStatement
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View v;
+        final SharedPreferences prefs = getSharedPreferences("molegame", Context.MODE_PRIVATE);
+        switch (item.getItemId()) {
+            case R.id.action_settings:
+                /*getFragmentManager().beginTransaction()
+                        .replace(android.R.id.content, new Fragment_Settings()).addToBackStack(null)
+                        .commit();*/
+                Log.i("Fragment Settings "," elegido volume");
+                builder = new AlertDialog.Builder(this);
+                v = this.getLayoutInflater().inflate(R.layout.volume, null);
+                final RadioGroup volume = (RadioGroup) v.findViewById(R.id.volume);
+                final String selVolume = prefs.getString("volume", "off");
+                Log.i("Fragment Settings "," elegido volume con anterioridad "+selVolume);
+                if ( selVolume.equals("on")){
+                    volume.check( R.id.on);
+                } else if (selVolume.equals("off") ){
+                    volume.check( R.id.off);
+                }
+                /*gender.check(
+                        prefs.getString("gender", "notparticipate").equals("male") ? R.id.male :
+                                R.id.female);*/
+
+                builder.setView(v);
+                builder.setTitle(R.string.volume);
+                builder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        try {
+                            int selVolumerInt = volume.getCheckedRadioButtonId();
+                            Log.i("Fragment Settings ","******* elegido volume onclick "+selVolumerInt+" on "+R.id.on+" off "+R.id.off);
+                            if ( selVolumerInt == R.id.on){
+                                Log.i("Fragment Settings "," elegido volume on");
+                                prefs.edit()
+                                        .putString("volume","on").apply();
+                            }else if ( selVolumerInt == R.id.off){
+                                prefs.edit()
+                                        .putString("volume","off").apply();
+                            }
+                            prefs.edit()
+                                    .putString("volume :",
+                                            volume.getCheckedRadioButtonId() == R.id.on ? "on" : "off")
+                                    .apply();/*
+                            preference.setSummary(getString(R.string.gender_summary,
+                                    prefs.getString("gender", DEFAULT_GENDER)));
+                            //prefs.setSummary(getString(R.string.step_size_summary, prefs.getString("gender",Fragment_Settings.DEFAULT_GENDER)));*/
+                        } catch (NumberFormatException nfe) {
+                            nfe.printStackTrace();
+                        }
+                        dialog.dismiss();
+                    }
+                });
+                builder.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                });
+                builder.create().show();
+                break;
+
+            case R.id.action_about:
+                builder.setTitle(R.string.about);
+                TextView tv = new TextView(this);
+                tv.setPadding(10, 10, 10, 10);
+                tv.setText(R.string.about_text_links);
+
+                tv.setMovementMethod(LinkMovementMethod.getInstance());
+                builder.setView(tv);
+                builder.setPositiveButton(android.R.string.ok,
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(final DialogInterface dialog, int which) {
+                                dialog.dismiss();
+                            }
+                        });
+                builder.create().show();
+                break;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+}
+
+

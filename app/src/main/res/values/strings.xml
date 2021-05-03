@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">Beat AR</string>
+    <string name="action_settings">Settings</string>
+    <string name="start">Settings</string>
+    <string name="about">About</string>
+    <string name="about_text_links">This app was created by fdbgames, more games at <a href="https://play.google.com/store/apps/developer?id=fdbgames">here</a>.</string>
+    <string name="about_link2">This app was created by fdbgames, more games at <a href="https://play.google.com/store/apps/details?id=co.fdbgames.battlecolors">here</a>.</string>
+    <string name="volume">Volume</string>
+    <string name="volume_summary">Volumen : %s</string>
+    <string name="on">on</string>
+    <string name="off">off</string>
+    <string name="level1">lever 1</string>
+    <string name="level2">level 2</string>
+    <string name="level">level</string>
+    <string name="score">score</string>
+    <string name="time">time</string>
+    <string name="ubicacion">locate inside the figure</string>
+    <string name="ubicacion2">figure</string>
+    <string name="precauciones1">Avoid having people or </string>
+    <string name="precauciones2">objects nearby while </string>
+    <string name="precauciones3">playing</string>
+    <string name="historico">history</string>
+</resources>

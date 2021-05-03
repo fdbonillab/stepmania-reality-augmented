@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.design.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#ed5298"
+    android:id="@+id/main_layout"
+    tools:context=".MainActivity">
+
+
+
+
+    <org.opencv.android.JavaCameraView
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:visibility="gone"
+        android:id="@+id/tutorial1_activity_java_surface_view"
+        app:show_fps="true"
+        app:camera_id="front">
+
+    </org.opencv.android.JavaCameraView>
+    <RelativeLayout
+        android:id="@+id/LinearARotar"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:context=".MainActivity"
+        android:orientation="vertical">
+    <LinearLayout
+        android:id="@+id/LinearPrincipal"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+    <LinearLayout
+        android:id="@+id/LinearLayout1"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="4"
+        android:padding="20dp"
+        android:layout_margin="20px"
+        android:orientation="horizontal">
+        <ScrollView
+            android:id="@+id/scrollLayout1"
+            android:layout_width="match_parent"
+            android:background="#d642de"
+            android:layout_height="match_parent">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#42ded1"
+                android:orientation="vertical"
+                >
+                <TextView
+                    android:id="@+id/display_html_string"
+                    android:layout_height="wrap_content"
+                    android:layout_width="wrap_content"
+                    android:text="Text1"
+                    android:textColorHighlight="#ffffff"
+                    android:textColorLink="#ffffff"
+                    android:textColor="#ffffff"
+                    android:background="#000000"
+                    android:layout_margin="10dp"
+                    />
+                <Button
+                    android:text="OK"
+                    android:id="@+id/buttonOkLinks"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content">
+                </Button>
+
+            </LinearLayout>
+
+        </ScrollView>
+        <ScrollView
+            android:id="@+id/scrollLayoutTable"
+            android:layout_width="match_parent"
+            android:background="#d642de"
+            android:layout_height="match_parent">
+        <TableLayout
+            android:id="@+id/tableLayoutScores"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#7642de">
+            <TableRow android:id="@+id/titulosScores">
+                <TextView
+                    android:text="Cancion"
+                    android:textColor="#ffffff"
+                    android:padding="10dip" />
+                <TextView
+                    android:text="Nivel"
+                    android:gravity="right"
+                    android:textColor="#ffffff"
+                    android:padding="10dip" />
+                <TextView
+                    android:text="Puntaje"
+                    android:gravity="right"
+                    android:textColor="#ffffff"
+                    android:padding="10dip" />
+                <TextView
+                    android:text="Fecha"
+                    android:gravity="right"
+                    android:textColor="#ffffff"
+                    android:padding="10dip" />
+            </TableRow>
+
+        </TableLayout>
+        </ScrollView>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/LinearLayout2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#fdfdbc"
+        android:orientation="horizontal"
+        >
+
+            <RelativeLayout
+                android:id="@+id/InnerRelativeLayout2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@color/colorPrimary"
+                android:layout_alignParentBottom="true" >
+                <Button
+                    android:text="select file"
+                    android:id="@+id/buttonSelectFile"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_toLeftOf="@id/buttonSongs">
+                </Button>
+                <Button
+                    android:text="download songs"
+                    android:id="@+id/buttonSongs"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_toLeftOf="@id/buttonStart">
+                </Button>
+
+                <Button
+                    android:text="submit_butto"
+                    android:id="@+id/buttonStart"
+                    android:layout_alignParentRight="true"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content">
+                </Button>
+
+
+                <ImageButton
+                    android:text="submit_butto2"
+                    android:id="@+id/buttonShare"
+
+                    android:src="@drawable/btnshare"
+                    android:layout_centerInParent="true"
+                    android:scaleType="fitXY"
+                    android:layout_width="50dp"
+                    android:layout_height="50dp"
+                    android:background="@android:color/transparent"
+                    android:layout_toLeftOf="@id/buttonSelectFile"
+                    >
+                </ImageButton>
+
+
+            </RelativeLayout>
+    </LinearLayout>
+
+    </LinearLayout>
+    </RelativeLayout>
+   
+</android.support.design.widget.CoordinatorLayout>

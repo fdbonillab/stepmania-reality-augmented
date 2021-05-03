@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Beat AR</string>
+    <string name="action_settings">Ajustes</string>
+    <string name="start">Inicio</string>
+    <string name="about">Acerca de</string>
+    <string name="level1">Nivel 1</string>
+    <string name="on">on</string>
+    <string name="off">off</string>
+    <string name="volume">Volumen</string>
+    <string name="volume_summary">Volumen : %s</string>
+    <string name="about_text_links">Esta aplicacion fue creado por fdbgames, mas juegos  <a href="https://play.google.com/store/apps/developer?id=fdbgames">aqui</a>.</string>
+    <string name="about_link2">Esta aplicacion fue creado por fdbgames, mas juegos aqui</string>
+    <string name="level">Nivel</string>
+    <string name="score">puntaje</string>
+    <string name="time">tiempo</string>
+    <string name="ubicacion">Ubiquese dentro de la </string>
+    <string name="ubicacion2">silueta</string>
+    <string name="precauciones1">Evite tener personas u </string>
+    <string name="precauciones2">objetos cerca mientras</string>
+    <string name="precauciones3">juega</string>
+    <string name="historico">historico</string>
+
+</resources>

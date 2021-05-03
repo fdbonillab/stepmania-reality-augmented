@@ -1,0 +1,1541 @@
+Index: java/com/fdbgames/mole/stepmaniac/MainActivity.java
+===================================================================
+--- java/com/fdbgames/mole/stepmaniac/MainActivity.java	(revisión: 1838)
++++ java/com/fdbgames/mole/stepmaniac/MainActivity.java	(revisión: 1830)
+@@ -21,6 +21,7 @@
+ import android.os.Environment;
+ import android.os.Handler;
+ import android.support.annotation.Nullable;
++import android.support.design.widget.CoordinatorLayout;
+ import android.support.v4.app.ActivityCompat;
+ import android.support.v4.content.ContextCompat;
+ import android.support.v7.app.AppCompatCallback;
+@@ -36,6 +37,7 @@
+ import android.view.SubMenu;
+ import android.view.SurfaceView;
+ import android.view.View;
++import android.view.ViewGroup;
+ import android.view.WindowManager;
+ import android.widget.Button;
+ import android.widget.GridLayout;
+@@ -42,7 +44,7 @@
+ import android.widget.ImageButton;
+ import android.widget.LinearLayout;
+ import android.widget.RadioGroup;
+-import android.widget.ScrollView;
++import android.widget.RelativeLayout;
+ import android.widget.TextView;
+ 
+ import com.badlogic.gdx.Gdx;
+@@ -82,6 +84,7 @@
+ import org.opencv.core.Rect;
+ import org.opencv.core.Scalar;
+ import org.opencv.core.Size;
++import org.opencv.imgcodecs.Imgcodecs;
+ import org.opencv.imgproc.Imgproc;
+ 
+ import java.io.BufferedInputStream;
+@@ -104,6 +107,7 @@
+ import com.github.angads25.filepicker.view.FilePickerDialog;
+ 
+ import static org.opencv.core.Core.flip;
++import static org.opencv.core.Core.getOptimalDFTSize;
+ import static org.opencv.core.Core.max;
+ import static org.opencv.core.Core.meanStdDev;
+ import static org.opencv.core.CvType.CV_8UC1;
+@@ -160,7 +164,6 @@
+     Button botonSongs = null;
+     Button botonSelectFile = null;
+     TextView textLinksDowload = null;
+-    ScrollView scrollTextoLinks = null;
+     boolean existeHiloRevisandoEndGame = false;
+     SMAssets assets;
+     static MediaPlayer mpIntro ;
+@@ -255,27 +258,26 @@
+             seconds = seconds % 60;
+             int sizeMeasure = 30;
+             if ( game != null){
+-                //Log.i(TAG, "****** info game  "+game.chart.toString());
++                Log.i(TAG, "****** info game  "+game.chart.toString());
+                 sizeMeasure =  game.chart.noteData.measures.size();
+             }
+             if( endGame  ){
+-                ////Log.i(TAG, "****** timer reconoce final del juego " );
++                //Log.i(TAG, "****** timer reconoce final del juego " );
+                 //layoutNiveles.setVisibility(View.VISIBLE);
+                 botonShare.setVisibility(View.VISIBLE   );
+                 botonSelectFile.setVisibility(View.VISIBLE);
+                 botonSongs.setVisibility(View.VISIBLE);
+             }
+-            if( imgUltimoAcierto != null && endGame ){//&& imgUltimoAcierto != null && (seconds > SEGUNDOS_LIMITE*0.5) ){
+-                Log.i(TAG, "****** en guardarImagen seconds "+seconds);
++            if( imgUltimoAcierto != null && seconds == 0 ){//&& imgUltimoAcierto != null && (seconds > SEGUNDOS_LIMITE*0.5) ){
++                //Log.i(TAG, "****** en guardarImagen seconds "+seconds);
+                 guardarImagenUltimoACierto();
+-                imgUltimoAcierto = null;
+             }/// tal vez el error del bug de segundo juegos tanga algo que ver con que ya esta corriendo un hilo periodico este hilo desde el primer click
+             /// que pasaria si solo lo ejecuto una vez ???
+             /// se me ocurre que este hilo periodico solo es necesario en el juego de los topos porque alla el que manda es el contador de tiempo hacia atras, aki
+             /// manda es el final de la cancion
+-            ////Log.i(TAG, "****** en timer endGame  "+endGame+" inicio juego "+inicioJuego+" gameEngine song time "+game.songPlayer.time+" idjuego este "+game.getIdJuego());
++            //Log.i(TAG, "****** en timer endGame  "+endGame+" inicio juego "+inicioJuego+" gameEngine song time "+game.songPlayer.time+" idjuego este "+game.getIdJuego());
+             boolean juegoEnProgreso = (idUltimoMeasure > 0)? true:false;
+-            //Log.i(TAG, "****** en timer endGame  idUltimoMeasure "+idUltimoMeasure+" endGame  "+endGame+" inicio juego "+inicioJuego+" enEspera "+enEspera+" thread "+Thread.currentThread().getName()+" id "+Thread.currentThread().getId());
++            Log.i(TAG, "****** en timer endGame  idUltimoMeasure "+idUltimoMeasure+" endGame  "+endGame+" inicio juego "+inicioJuego+" enEspera "+enEspera+" thread "+Thread.currentThread().getName()+" id "+Thread.currentThread().getId());
+             if( endGame && botonStart != null && !enEspera ){
+                 botonStart.setText("New Game");
+                 if( !enEspera ){
+@@ -288,7 +290,7 @@
+                 botonStart.setVisibility(View.GONE);
+             }*/
+             //if ( endGame ){
+-            //timerHandler.postDelayed(this, 1000);/// como lo que manda es el final de la cancion no es necesario que este hilo se ejecute tan seguido
++                //timerHandler.postDelayed(this, 1000);/// como lo que manda es el final de la cancion no es necesario que este hilo se ejecute tan seguido
+             //}
+         }
+     };
+@@ -302,19 +304,18 @@
+             inicioEspera = 0;
+             tiempoFinEspera = startTime;
+             timerHandler.removeCallbacksAndMessages(null);/// remueve todos los hilos relacionados a este manager
+-            //Log.i(TAG, "****** desde timerEsperaRunnable ");
++            Log.i(TAG, "****** desde timerEsperaRunnable ");
+             //timerHandler.hasMessages()
+             /// espero que esta jugada del removecallbacks remueva el hilo que venia revisando el final del primer juego y con eso solo queda vivo
+             /// el que se lanza despues de este comentario
+             //if(!existeHiloRevisandoEndGame){
+-            timerHandler.postDelayed(timerRunnable,0);/// quito y pongo esto para ver si se soluciona con un solo timer
+-            existeHiloRevisandoEndGame = true;
++                timerHandler.postDelayed(timerRunnable,0);/// quito y pongo esto para ver si se soluciona con un solo timer
++                existeHiloRevisandoEndGame = true;
+             //}
+             botonStart.setVisibility(View.GONE);
+             idJuego++;
+-            if(packSongDescargado != null && game != null ){
+-                //game = new GameEngine(contexto, packSongDescargado );
+-                game.play();
++            if(packSongDescargado != null ){
++                game = new GameEngine(contexto, packSongDescargado );
+             } else {
+                 game = new GameEngine(contexto, idJuego );
+             }
+@@ -325,7 +326,7 @@
+         @Override
+         public void run() {
+             endGame = true;//// no me gusto esta solucion pero no veo porque en endgame se termina antes de terminar de pintar las ultimas flechas
+-            //Log.i(TAG, "****** desde timerUltimoMeasure ");
++            Log.i(TAG, "****** desde timerUltimoMeasure ");
+             timerHandler.postDelayed(timerRunnable,0);
+         }
+     };
+@@ -336,7 +337,7 @@
+             switch (status) {
+                 case LoaderCallbackInterface.SUCCESS:
+                 {
+-                    ////Log.i(TAG, "OpenCV loaded successfully");
++                    //Log.i(TAG, "OpenCV loaded successfully");
+                     mOpenCvCameraView.enableView();
+                 } break;
+                 default:
+@@ -350,7 +351,7 @@
+         int PIXEL_DIFF_THRESHOLD = 5;
+         int IMAGE_DIFF_THRESHOLD = 100;//5;
+         //Mat base = new Mat();
+-        ////Log.i(TAG, "****** en hasChanges ");
++        //Log.i(TAG, "****** en hasChanges ");
+         Mat bg = new Mat();
+         Mat cg = new Mat();
+         Mat diff = new Mat();
+@@ -363,7 +364,7 @@
+         Imgproc.cvtColor(current, cg, Imgproc.COLOR_BGR2GRAY);
+         Core.absdiff(bg, cg, diff);
+         Imgproc.threshold(diff, tdiff, PIXEL_DIFF_THRESHOLD, 0.0, Imgproc.THRESH_TOZERO);
+-        //////Log.i(TAG, "****** count non zero " +Core.countNonZero(tdiff));
++        ////Log.i(TAG, "****** count non zero " +Core.countNonZero(tdiff));
+         if (Core.countNonZero(tdiff) <= IMAGE_DIFF_THRESHOLD) {
+             return false;
+         }
+@@ -377,11 +378,11 @@
+         int n = 0;
+         for (Mat pm: points) {
+             //log(lvl, "(%d) %s", n++, pm);
+-            ////Log.i(TAG, "****** points " + n+++" "+pm);
++            //Log.i(TAG, "****** points " + n+++" "+pm);
+             //printMatI(pm);
+         }
+         //log(lvl, "contours: %s", contours);
+-        ////Log.i(TAG, "****** countours " +contours);
++        //Log.i(TAG, "****** countours " +contours);
+         //printMatI(contours);
+         //the largest contour is found at the end of the contours vector
+         //we will simply assume that the biggest contour is the object we are looking for.
+@@ -439,7 +440,7 @@
+         int PIXEL_DIFF_THRESHOLD = 5;
+         int IMAGE_DIFF_THRESHOLD = 5;//5;//1000
+         //Mat base = new Mat();
+-        ////Log.i(TAG, "****** en cambiarCurrent version 8.8 ");
++        //Log.i(TAG, "****** en cambiarCurrent version 8.8 ");
+         Mat bg = new Mat();
+         Mat cg = new Mat();
+         Mat diff = new Mat();
+@@ -459,7 +460,7 @@
+         ///Core.absdiff(bg, cg, diff);////parece que resalta el objeto estatico
+         Core.absdiff(cg, bg, diff);
+         //Imgproc.threshold(diff, tdiff, PIXEL_DIFF_THRESHOLD, 0.0, Imgproc.THRESH_TOZERO);
+-        ////Log.i(TAG, "****** count non zero " + Core.countNonZero(tdiff));
++        //Log.i(TAG, "****** count non zero " + Core.countNonZero(tdiff));
+         Imgproc.putText(current, "intento 2",
+                 new Point(40, 40),
+                 Core.FONT_HERSHEY_PLAIN, 4.0, new Scalar(255,0,0));
+@@ -472,7 +473,7 @@
+         int IMAGE_DIFF_THRESHOLD = 5;//5;//1000
+         //Mat base = new Mat();
+         String version = "9.2";
+-        ////Log.i(TAG, "****** en hasChanges version "+version);
++        //Log.i(TAG, "****** en hasChanges version "+version);
+         Mat bg = new Mat();
+         Mat cg = new Mat();
+         Mat diff = new Mat();
+@@ -493,7 +494,7 @@
+         ///Core.absdiff(bg, cg, diff);////parece que resalta el objeto estatico
+         Core.absdiff(cg, bg, diff);
+         //Imgproc.threshold(diff, tdiff, PIXEL_DIFF_THRESHOLD, 0.0, Imgproc.THRESH_TOZERO);
+-        ////Log.i(TAG, "****** count non zero " +Core.countNonZero(diff));
++        //Log.i(TAG, "****** count non zero " +Core.countNonZero(diff));
+         if (Core.countNonZero(diff) <= IMAGE_DIFF_THRESHOLD) {
+             //current = diff;
+             Imgproc.putText(current, "intento 8 no dif",
+@@ -510,11 +511,11 @@
+         Mat contours = new Mat();
+         Imgproc.findContours(diff, points, contours, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
+         int n = 0;
+-        ////Log.i(TAG, "****** points size " + points.size()+"  contours size"+contours.size());
++        //Log.i(TAG, "****** points size " + points.size()+"  contours size"+contours.size());
+         if ( points != null && points.size() > 0 && false ){
+             for (Mat pm: points) {
+                 //log(lvl, "(%d) %s", n++, pm);
+-                ////Log.i(TAG, "****** points version 3" + n+++" "+pm);
++                //Log.i(TAG, "****** points version 3" + n+++" "+pm);
+                 //printMatI(pm);
+                 Mat unContour = pm;
+                 Rect rect = Imgproc.boundingRect(unContour);
+@@ -522,7 +523,7 @@
+ 
+             }
+             //log(lvl, "contours: %s", contours);
+-            ////Log.i(TAG, "****** countours " +contours);
++            //Log.i(TAG, "****** countours " +contours);
+ 
+             MatOfPoint largestContour = points.get(points.size()-1);
+ 
+@@ -535,7 +536,7 @@
+         }
+         //Imgproc.drawContours( currentCopy, points,-1,new Scalar(0, 255, 0, 255),3); //// descomentar para debug este drawcontours
+         points = borrarContoursMenores2( contours, currentCopy, points );
+-        //Imgproc.drawContours( currentCopy, points,-1,new Scalar(0, 255, 0, 255),3); //// descomentar para debug este drawcontours
++        Imgproc.drawContours( currentCopy, points,-1,new Scalar(0, 255, 0, 255),3); //// descomentar para debug este drawcontours
+         base = current.clone();
+         //current = diff;
+         flip(diff,diff,1);
+@@ -544,10 +545,10 @@
+         ultimaDeteccion = detectarToqueStepmania(diff);
+         if( ultimaDeteccion == ACIERTO || ultimaDeteccion == FALLA ){ //ultimaDeteccion == ACIERTO){
+             int contAciertosFila = 0;
+-            ////Log.i(TAG, "****** receptores aciertos  down left " +mapaReceptores.get(ESQUINA_DOWN_LEFT).isAcertado());
+-            ////Log.i(TAG, "****** receptores aciertos  top left " +mapaReceptores.get(ESQUINA_TOP_LEFT ).isAcertado());
+-            ////Log.i(TAG, "****** receptores aciertos  top right " +mapaReceptores.get(ESQUINA_TOP_RIGHT ).isAcertado());
+-            ////Log.i(TAG, "****** receptores aciertos  down right " +mapaReceptores.get(ESQUINA_DOWN_RIGHT ).isAcertado());
++            //Log.i(TAG, "****** receptores aciertos  down left " +mapaReceptores.get(ESQUINA_DOWN_LEFT).isAcertado());
++            //Log.i(TAG, "****** receptores aciertos  top left " +mapaReceptores.get(ESQUINA_TOP_LEFT ).isAcertado());
++            //Log.i(TAG, "****** receptores aciertos  top right " +mapaReceptores.get(ESQUINA_TOP_RIGHT ).isAcertado());
++            //Log.i(TAG, "****** receptores aciertos  down right " +mapaReceptores.get(ESQUINA_DOWN_RIGHT ).isAcertado());
+             if( mapaReceptores.get(ESQUINA_DOWN_LEFT).isAcertado()){
+                 game.inputDown(Direction.LEFT);
+                 //mapaReceptores.get(ESQUINA_DOWN_LEFT).setAcertado(false);
+@@ -588,7 +589,7 @@
+                     ;lstScoresRecientes.add(unScore);
+                     break;
+             }
+-            hayUnAcierto = true;
++
+         }
+         return currentCopy;
+     }
+@@ -603,19 +604,19 @@
+         }
+         game.step(Gdx.graphics.getDeltaTime());
+         Vector2 arrowPos = new Vector2(0f, 0f);/// esto es de libgdx
+-        ////Log.i(TAG, "********2 datos de stepmania measuere size "+game.chart.noteData.measures.size());
++        //Log.i(TAG, "********2 datos de stepmania measuere size "+game.chart.noteData.measures.size());
+         boolean seMostraronFlechas = false;
+         saltarNotes = true;
+         notasASaltar = 3;
+         for (Measure measure : game.chart.noteData.measures) {
+-            //////Log.i(TAG, "******** datos de stepmania neasure. notes size "+measure.notes.size()+" id "+measure.id);
++            ////Log.i(TAG, "******** datos de stepmania neasure. notes size "+measure.notes.size()+" id "+measure.id);
+             if( true ){ //measure.notes.size() <= limiteNotesFaciles || (measure.id == (game.chart.noteData.measures.size()-1))){
+                 for(int i = 0; i < measure.notes.size(); i++) {/// intento de poner menos lineas y hacer que sean mas faciles de lograr, pero parece que estan
+-                    ////muy lejos como y ya se ven muy encima como para prepara una combinacion por adelantado, parece que va tocar dejarlas de abajo arriba como estaban.shit
+-                    if (saltarNotes && i%notasASaltar > 0){
+-                        continue;
+-                    }
+-                    //////Log.i(TAG, "******** datos de stepmania  indice i "+i+" mRgba.cols() "+mRgba.cols());
++                ////muy lejos como y ya se ven muy encima como para prepara una combinacion por adelantado, parece que va tocar dejarlas de abajo arriba como estaban.shit
++                if (saltarNotes && i%notasASaltar > 0){
++                    continue;
++                }
++                    ////Log.i(TAG, "******** datos de stepmania  indice i "+i+" mRgba.cols() "+mRgba.cols());
+                     arrowPos.y = measure.getBeatForNote(i);
+                     arrowPos.y -= game.smFile.timingData.getBeat(game.songPlayer.time + game.smFile.offset);
+                     arrowPos.y *= SPEED;//Config.SPEED;
+@@ -631,8 +632,8 @@
+                             double posX = (mRgba.cols()-((mRgba.cols()/5))*(arrowPos.x+3));/// el +2 es para anular el -2 conel que empiezan las x // 3*(mRgba.rows()*0.4);
+                             Point resPos = new Point(posX, posY);/// con 3 sobra uno despues de neutralizar el -2
+                             //Point resPos = transformarPosModEsquinas(arrowPos);
+-                            ////Log.i(TAG, "********  datos de stepmania file: " + measure.getOrder(i)+" posx "+arrowPos.x+" posy "+posY +" arrowposy "+arrowPos.y);
+-                            ////Log.i(TAG, "********  idMeasure " +measure.id+" size notes del measure "+measure.notes.size());
++                            //Log.i(TAG, "********  datos de stepmania file: " + measure.getOrder(i)+" posx "+arrowPos.x+" posy "+posY +" arrowposy "+arrowPos.y);
++                            //Log.i(TAG, "********  idMeasure " +measure.id+" size notes del measure "+measure.notes.size());
+                             if ( posY < mRgba.cols()/1){/// en la pantalla se ve como en si fuera en la mitad pero en realidad como tiene medio lado negativo que no se ve entonces
+                                 //// esta es la 4 cuarta parte lo que es congrutente con el valor de division
+                                 //mostrarCircleSegunX(resPos, arrowPos);
+@@ -654,9 +655,9 @@
+             if(arrowPos.y > Config.DRAW_DISTANCE) continue;
+         }
+         ///// parece que aunque el ultimo measure ya se haya alcanzado en este punto igual las flechas que se estan mostrando van muy atras todavia
+-        //Log.i(TAG, "****** a desde primera integracion idUltimoMeasure "+idUltimoMeasure+" endGame  "+endGame+" contadorNotasUltimoMeasure '"+contadorNotasUltimoMeasure);
++        Log.i(TAG, "****** a desde primera integracion idUltimoMeasure "+idUltimoMeasure+" endGame  "+endGame+" contadorNotasUltimoMeasure '"+contadorNotasUltimoMeasure);
+         if( idUltimoMeasure >= game.chart.noteData.measures.size()-1 && !flechaMostrandose && !endGame && contadorNotasUltimoMeasure == 0 ){/// perdi 5 horas por no fijarme en esta condicion???
+-            ////Log.i(TAG, "****** endgame detectado en base flechas mostradas y size measure restando 3");
++            //Log.i(TAG, "****** endgame detectado en base flechas mostradas y size measure restando 3");
+             //endGame = true; ///¿¿¿¿¿¿¿¿ pasara algo que mientras el el mostrar flechas lanza el hilo que cambia el endGame a true, este hilo llega primero y vuelve a entrar
+             /// ve que el endGame sigue en false y vuelve y desecadena un fin del juego lo que hace que el juego que ya empezo acabe prematuramente ?????
+             if( contadorNotasUltimoMeasure == 0){/// como este contador notas solo lo escribe y lo revisa este hilo tengo la esperanza que impida que este bloque se ejecute dos veces seguidas
+@@ -664,12 +665,12 @@
+             }
+             int idUltimoMeasure = game.chart.noteData.measures.size()- 1;
+             maximoNotasUltimoMeasure = game.chart.noteData.measures.get( idUltimoMeasure ).notes.size();
+-            //Log.i(TAG, "****** desde primera integracion timerRunnable thread "+Thread.currentThread().getName()+" "+Thread.currentThread().getId()+
+-            //" contadorNotasUltimoMeasure "+contadorNotasUltimoMeasure);
++            Log.i(TAG, "****** desde primera integracion timerRunnable thread "+Thread.currentThread().getName()+" "+Thread.currentThread().getId()+
++                    " contadorNotasUltimoMeasure "+contadorNotasUltimoMeasure);
+             //timerHandler.postDelayed(timerUltimoMeasure, 4000);/// toco con timer de delay porque no se me ocurrio otra solucion
+             //timerHandler.postDelayed(timerRunnable, 4000);/// toco con timer de delay porque no se me ocurrio otra solucion
+         } /// desde que se muestra un camino mas largo para las flechas las ultimas notas se cortan anticipadamente para mostrar la imagen de precauciones, por eso le subo el delay a 4s
+-        ////Log.i(TAG, "****** 4 endgame detectando notesRestantes "+notesRestantes+" idultimomeasure "+idUltimoMeasure);
++        //Log.i(TAG, "****** 4 endgame detectando notesRestantes "+notesRestantes+" idultimomeasure "+idUltimoMeasure);
+         //mostrarReceptores();
+         /*mostrarReceptoresPoligono();
+         mostrarReceptoresPoligonoTocado();
+@@ -677,7 +678,7 @@
+         //mostrarScore();
+     }
+     private void registrarPuntosRecientes( Point resPos, Measure measure ){
+-        //////Log.i(TAG, "****** measure id en registrar "+measure.id+" size notes "+measure.notes.size()+" isAllNotesMostradas "+measure.isAllNotesMostradas());
++        ////Log.i(TAG, "****** measure id en registrar "+measure.id+" size notes "+measure.notes.size()+" isAllNotesMostradas "+measure.isAllNotesMostradas());
+         if (lstPuntosRecientes == null ){
+             lstPuntosRecientes = new ArrayList<PointMeasure>();
+         }
+@@ -697,7 +698,7 @@
+         for(PointMeasure elPunto : lstPuntosRecientes ){
+             strPuntos+= " "+elPunto.point.y+" ";
+         }
+-        //////Log.i(TAG, "****** lstPuntosRecientes "+strPuntos);
++        ////Log.i(TAG, "****** lstPuntosRecientes "+strPuntos);
+     }
+     private void borrarPuntosYNegativosDeLista(){
+         for(PointMeasure elPunto : lstPuntosRecientes ){
+@@ -708,7 +709,7 @@
+     }
+     private void borrarPuntosMeasuresViejos(){
+         int toleracia = 4;
+-        ///si funciona es gracias a esto https://stackoverflow.com/questions/223918/iterating-through-a-collection-avoiding-concurrentmodificationexception-when-re
++         ///si funciona es gracias a esto https://stackoverflow.com/questions/223918/iterating-through-a-collection-avoiding-concurrentmodificationexception-when-re
+         for (Iterator<PointMeasure> iterator = lstPuntosRecientes.iterator(); iterator.hasNext();) {
+             PointMeasure elPunto  = iterator.next();
+             if( elPunto.measure.id < (idUltimoMeasure - toleracia) ){//elPunto.point.y < 0 ){
+@@ -771,7 +772,7 @@
+             Point pt2 = new Point(resPos.x+imgResize.cols(),resPos.y+imgResize.rows());
+             Point pt3 = new Point(100,100);
+             Rect roi =  new Rect( resPos,pt2);//Rect(cx,cy,imgArrow.cols(),imgArrow.rows());
+-            ////Log.i(TAG, "******* roi flechas a pintar roi x"+roi.x+" roi y "+roi.y+" width "+roi.width+" height "+roi.height+" maxrows "+mRgba.rows()+" maxcols "+mRgba.cols());
++            //Log.i(TAG, "******* roi flechas a pintar roi x"+roi.x+" roi y "+roi.y+" width "+roi.width+" height "+roi.height+" maxrows "+mRgba.rows()+" maxcols "+mRgba.cols());
+             rectangle(mRgba,resPos,pt2,Scalar.all(255),2);
+             Rect roiScreen = new Rect( new Point(0,0),mRgba.size());
+             if ( roiScreen.contains(resPos) && roiScreen.contains(pt2) ){
+@@ -893,7 +894,7 @@
+             //color = lstColoresFlechas.get(measure.getOrder(indice));
+             double div5 = mRgba.cols()/5;
+             double vecesDiv5 =  resPos.x/(div5);
+-            ////Log.i(TAG, "****** color para flechas arriba "+vecesDiv5);
++            //Log.i(TAG, "****** color para flechas arriba "+vecesDiv5);
+             switch ( (int)vecesDiv5  ){
+                 case 1 : color = COLOR_YELLOW;break;
+                 case 2 : color = COLOR_GREEN;break;
+@@ -931,9 +932,9 @@
+                 color,    // Scalar measureActualobject for color
+                 LINE_8                          // Thickness of the line
+         );
+-        /*Imgproc.putText(mRgba, ""+measure.id+"-"+idUltimoMeasure,
++        Imgproc.putText(mRgba, ""+measure.id+"-"+idUltimoMeasure,
+                 lstPtsFlecha.get(0).toList().get(0),
+-                face[3], 1, color);*/
++                face[3], 1, color);
+         /*Imgproc.putText(mRgba, " y "+lstPtsFlecha.get(0).toList().get(0).y,
+                 lstPtsFlecha.get(0).toList().get(0),
+                 face[3], 1, color);*/
+@@ -943,8 +944,8 @@
+         }
+         //// cada note tiene  un alcance como 287 en y que se saca de measure.getBeatForNote(indice)
+         if( idUltimoMeasure >= game.chart.noteData.measures.size()- 2){
+-            //Log.d(TAG, "****** a contadorNotasUltimoMeasure "+contadorNotasUltimoMeasure+" maximoNotasUltimoMeasure "+maximoNotasUltimoMeasure+
+-            //"  measure.getBeatForNote(i)  "+ measure.getBeatForNote(indice));
++            Log.d(TAG, "****** a contadorNotasUltimoMeasure "+contadorNotasUltimoMeasure+" maximoNotasUltimoMeasure "+maximoNotasUltimoMeasure+
++                    "  measure.getBeatForNote(i)  "+ measure.getBeatForNote(indice));
+             if( contadorNotasUltimoMeasure > 0 ){
+                 contadorNotasUltimoMeasure++;
+             }
+@@ -951,7 +952,7 @@
+             if( verificarBeatsEnMaximo(measure) && maximoNotasUltimoMeasure > 0 ){
+                 //endGame = true;
+                 long delay = ((2-SPEED)+1)*4000;
+-                //Log.d(TAG, "****** delay "+delay);
++                Log.d(TAG, "****** delay "+delay);
+                 timerHandler.postDelayed(timerUltimoMeasure, delay );
+             }
+         }
+@@ -1069,19 +1070,18 @@
+         flechaMostrandose = false;
+     }
+     private void mostrarBodyOutline(){
+-        int resizeX = (int)(mRgba.cols()*0.5);
+-        int resizeY = (int)(mRgba.rows()*0.6);
++        int resizeX = mRgba.cols()/2;
++        int resizeY = mRgba.rows()/2;
+         int posx =  0;
+         double inicioTextoX = 0.1;
+         double sizeFont =1.4;
+-        double offsetX = 5;
+-        int posy =  (int)Math.round(mRgba.rows()*0.3);
++        int posy =  (int)Math.round(mRgba.rows()*0.4);
+         Mat img = null;
+         if( !inicioJuego ){
+             try {
+-                img = Utils.loadResource(this, R.drawable.fondoblanco, CvType.CV_8UC4);
++                img = Utils.loadResource(this, R.drawable.bodymidgreen, CvType.CV_8UC4);
+                 //Imgproc.cvtColor(img, img, Imgproc.COLOR_RGB2BGRA);
+-                Mat imgMask = Utils.loadResource(this, R.drawable.imgsiluetamedia, CvType.CV_8UC4);
++                Mat imgMask = Utils.loadResource(this, R.drawable.bodymidmask, CvType.CV_8UC4);
+                 Mat imgResize = new Mat();  /// osea que paila no se puede usar assets, solo se puede usar drawable
+                 Mat imgResizeMask = new Mat();
+                 resize(img.clone(), imgResize,new Size(resizeX,resizeY));
+@@ -1088,7 +1088,7 @@
+                 resize(imgMask.clone(), imgResizeMask,new Size(resizeX,resizeY ));
+                 posx =  (int)Math.round(mRgba.cols()*0.5)-(imgResize.cols()/2);
+                 Rect roi = new Rect(posx,posy, imgResize.cols(),imgResize.rows());
+-                ////Log.i(TAG, "****** 2 mostrarBodyOutline size "+imgResize.size());
++                //Log.i(TAG, "****** 2 mostrarBodyOutline size "+imgResize.size());
+                 Mat subMat = mRgba.submat(roi);
+                 imgResize.copyTo(subMat,imgResizeMask);
+                 Imgproc.putText(mRgba, ""+getString(R.string.ubicacion),
+@@ -1328,7 +1328,7 @@
+                 mapaReceptores.get(ESQUINA_DOWN_LEFT).getColor() ,    // Scalar object for color
+                 LINE_8                          // Thickness of the line
+         );
+-        //mostrarBoundsReceptores();
++        mostrarBoundsReceptores();
+         ///// arriba derecha
+         Rect roi = new Rect(0,0,100,100);
+         Mat submatCopiarOrigen = mRgba.submat(roi);
+@@ -1339,11 +1339,11 @@
+         //// verde y rojo los esta mostrando para la derecha osea -2 y -1
+         //Imgproc.circle(mRgba, new Point(resPos.x, resPos.y ), 20, color, 2, 8, 0);
+         if (listTopRight != null){
+-            //////Log.i(TAG, "******** listTopRight != null ");
++            ////Log.i(TAG, "******** listTopRight != null ");
+             // Drawing polylines
+             for (Map.Entry<Integer, Receptor> entry : mapaReceptores.entrySet()) {
+                 Receptor unReceptor = entry.getValue();
+-                //////Log.i(TAG, "******** recorriendo mapreceptores en mostrarpoligonotocado istocado "+unReceptor.isTocado());
++                ////Log.i(TAG, "******** recorriendo mapreceptores en mostrarpoligonotocado istocado "+unReceptor.isTocado());
+                 if( unReceptor.isTocado() && !unReceptor.isAcertado() ){
+                     Imgproc.fillPoly (
+                             mRgba,                    // Matrix obj of the image
+@@ -1495,7 +1495,7 @@
+         double deltaY = (Math.round( (posOriginal.y)*((mRgba.cols()-0)/Config.DRAW_DISTANCE)));
+         deltaX = deltaY*2;
+         /// el valor de (y) en lugar de aumentar disminuye??
+-        //////Log.i(TAG, "********1 datos de stepmania delta x : " + deltaX);
++        ////Log.i(TAG, "********1 datos de stepmania delta x : " + deltaX);
+         if( posOriginal.x < 0){ /// estas dos arrows van para la izquierda
+             //// para conseguir llegar al extremo derecho hay que restar el max recorrido : inicioCaminoX -recorridoXMax;
+             posResul.x = inicioCaminoX -(recorridoXMax-deltaX);//(deltaX)-(offsetX*0.5);
+@@ -1503,7 +1503,7 @@
+             posResul.x = inicioCaminoX +(recorridoXMax-deltaX);
+         }
+         //posResul.x = posResul.x*2;
+-        //////Log.i(TAG, "********3 datos posResul : " + posResul.x+" inicioCaminoX "+inicioCaminoX);
++        ////Log.i(TAG, "********3 datos posResul : " + posResul.x+" inicioCaminoX "+inicioCaminoX);
+         //posResul.x = inicioCaminoX;
+         //deltaX = 20;/// delta fijo para hacer seguimiento solo de la coordenada x
+ 
+@@ -1555,7 +1555,7 @@
+             pointsCopia.add(mapContoursMayores.get(mapContoursMayores.lastKey()));
+             points = pointsCopia;
+ 
+-            ////Log.i(TAG, "******** enborrar points size: " + points.size()+" - "+points);
++            //Log.i(TAG, "******** enborrar points size: " + points.size()+" - "+points);
+ 
+         }
+ 
+@@ -1586,13 +1586,289 @@
+                 Imgproc.drawContours( currentCopy, points,i,new Scalar(255, 100, 0, 255),3); //// descomentar para debug este drawcontours
+         }
+         Imgproc.drawContours( currentCopy, points,indiceAreaMayor,blue,3); ////
+-        ////Log.i(TAG, sizeContours);
++        //Log.i(TAG, sizeContours);
+     }
++    private Mat mostrarTopo(Mat screen, Mat diff){
++        final Mat maskCopyTo = Mat.zeros(screen.size(), CV_8UC1); //
++        //Bitmap bMap= BitmapFactory.decodeResource(getResources(),R.drawable.image1);
++        //Mat m = Highgui.imread("/media/path_to_image");
++        String imageUri = "drawable://" + R.drawable.unmole2;
++        //Mat img = null;
++        Mat img = Imgcodecs.imread(imageUri);
++        Mat imgMask = null;
++        Bitmap bMap= BitmapFactory.decodeResource(getResources(),R.drawable.unmole2);
++        //Drawable drawable = getResources().getDrawable(R.drawable.unmole2);
++        int imageResource = getResources().getIdentifier("@drawable/unmole2",null,this.getPackageName());
++        //Log.i(TAG, "****** int id imageresource " +imageResource);
++        //Bitmap bitmap = ((BitmapDrawable) drawable).getBitmap();
++        bMap= BitmapFactory.decodeResource(getResources(),imageResource);
++        //Log.i(TAG, "****** size screen " +screen.size()+" topo size "+img.size()+" topo size empty "+img.size().empty());
++        if( img.size().empty() ){/// refactory para despues: esta logica deberia ir aparte en un construir secuencias o algo asi y por fuera de topo
++            try { ///// PENDIENTE UN refactory para poner todos en un cargarEstados o cargarImagenes o algo asi
++                if( secuenciaEstadosNormal == null ){
++                    Estado unEstado = null;
++                    Map<Integer,Estado> elMapEstados = new HashMap();
++                    List<Mat> lstSecuencia = new ArrayList<Mat>();
++                    List<Mat> lstSecuenciaMask = new ArrayList<Mat>();
++                    //imgMask = Utils.loadResource(this, R.drawable.unmole2mask2, CvType.CV_8UC4);
++                    img = Utils.loadResource(this, R.drawable.topodesaparece1, CvType.CV_8UC4);
++                    imgMask = Utils.loadResource(this, R.drawable.topodesaparecemask, CvType.CV_8UC1); //CV_8UC1  CV_8UC4
++                    unEstado = new Estado(Estado.DESAPARECE,img,imgMask);
++                    elMapEstados.put(unEstado.getIdEstado(),unEstado);
++                    img = Utils.loadResource(this, R.drawable.toposinsalir1, CvType.CV_8UC4);
++                    imgMask = Utils.loadResource(this, R.drawable.toposinsalirmask, CvType.CV_8UC1); //CV_8UC1  CV_8UC4
++                    unEstado = new Estado(Estado.SIN_SALIR,img,imgMask);
++                    elMapEstados.put(unEstado.getIdEstado(),unEstado);
++                    img = Utils.loadResource(this, R.drawable.toposaliendo, CvType.CV_8UC4);
++                    imgMask = Utils.loadResource(this, R.drawable.toposaliendomask, CvType.CV_8UC1); //CV_8UC1  CV_8UC4
++                    unEstado = new Estado(Estado.SALIENDO,img,imgMask);
++                    elMapEstados.put(unEstado.getIdEstado(),unEstado);
++                    img = Utils.loadResource(this, R.drawable.topoafuera1, CvType.CV_8UC4);
++                    imgMask = Utils.loadResource(this, R.drawable.topoafueramask, CvType.CV_8UC1); //CV_8UC1  CV_8UC4
++                    unEstado = new Estado(Estado.AFUERA,img,imgMask);
++                    elMapEstados.put(unEstado.getIdEstado(),unEstado);
++                    img = Utils.loadResource(this, R.drawable.topogolpeado, CvType.CV_8UC4);
++                    imgMask = Utils.loadResource(this, R.drawable.topogolpeadomask, CvType.CV_8UC1); //CV_8UC1  CV_8UC4
++                    unEstado = new Estado(Estado.GOLPEADO,img,imgMask);
++                    elMapEstados.put(unEstado.getIdEstado(),unEstado);
++                    img = Utils.loadResource(this, R.drawable.topoestrellas, CvType.CV_8UC4);
++                    imgMask = Utils.loadResource(this, R.drawable.topoestrellasmask, CvType.CV_8UC1); //CV_8UC1  CV_8UC4
++                    unEstado = new Estado(Estado.ESTRELLAS,img,imgMask);
++                    elMapEstados.put(unEstado.getIdEstado(),unEstado);
++                    secuenciaEstadosNormal = new SecuenciaEstados(SecuenciaEstados.NORMAL);
++                    secuenciaEstadosNormal.setMapEstados(elMapEstados);
++                    secuenciaEstadosNormal.setEstadoActual(secuenciaEstadosNormal.getDesaparece());
++                    secuenciaEstadosGolpe = new SecuenciaEstados(SecuenciaEstados.GOLPE);
++                    secuenciaEstadosGolpe.setMapEstados(elMapEstados);
++                    secuenciaEstadosGolpe.setEstadoActual(secuenciaEstadosGolpe.getDesaparece());
+ 
++                    lstSecuencia.add(img.clone());
++                    topoPlantilla = new Topo( Estado.DESAPARECE,lstSecuencia);
++                    topoPlantilla.setElEstado(secuenciaEstadosNormal.getDesaparece());
++                    topoPlantilla.setSecuenciaAnimacion(secuenciaEstadosNormal);
++                    int row = 0; int col = rand.nextInt(screen.cols());
++                    topoPlantilla.setCol(col);
++                    topoPlantilla.setRow(row);
++                    topoPlantilla.setLstSecuenciaMask(lstSecuenciaMask);
++                    topoPlantilla.setYaSalio(false);
++                    /////////
++                    cargarListaTopos();
++                }
++                if(lstSecuenciaGolpe == null)cargarSecuenciaGolpe();
++            } catch (IOException e) {
++                e.printStackTrace();
++            }
++        }
++        //unTopo = lstTopos.get(0);
++        screen = copiarToposAScreen(screen,diff);
++        return  screen;
++    }
++    private Mat copiarToposAScreen( Mat screen, Mat diff ){
++        Mat img;
++        Mat imgMask;
++        final Mat maskCopyTo = Mat.zeros(screen.size(), CV_8UC1); //
++        for(int i=0;i< nivel.getToposSimultaneos();i++){
++            Topo unTopo = lstTopos.get(i);
++            boolean desactivarLogicaJuego = false; /// para revisar lag de pantalla
++            if ( !desactivarLogicaJuego){
++                //int row = 0; int col = rand.nextInt(current.cols());
++                if( unTopo.getDuracionFrame() > LIMITE_DURACION_FRAME ){////todo: cuando hay golpe esta retencion de 4 frames no aplica, debe ser inmediato
++                    //Log.i(TAG, "****** duracionFrame "+duracionFrame+" hayUnAcierto "+hayUnAcierto);
++                    unTopo = mostrarTopoSegunEstado(unTopo);///unTopo.lstSecuencia.get(0);
++                    unTopo.setDuracionFrame(0);
++                } else {
++                    if( unTopo.getImgPintar() == null ){// si es la primera vez, la imagen para pintar es null
++                        unTopo = mostrarTopoSegunEstado(unTopo);///unTopo.lstSecuencia.get(0);
++                    }
++                    unTopo.setDuracionFrame(unTopo.getDuracionFrame()+1);
++                }
++                //frameAnterior = currentCopy.clone();*/
++            }
++            /// se muestra el topo en otro sitio
++            if(unTopo.getSecuenciaAnimacion().isFinalizada()){
++                unTopo.setYaSalio(false);
++                unTopo.setYaTocado(false);
++                unTopo.getSecuenciaAnimacion().setFinalizada(false);////en mostrartopo->secuencia.cambiarEstado tambien se cambia finalizada a true
++                unTopo.setCol(rand.nextInt(DIVISION_PANTALLA_ANCHO)*sextoDeAnchoPantalla); /// entonces si viene true por causa de secuencia.cambio aki se pone false y nunca se va cumplir la condicion para cambiar a secuencia normal
++            }
++            //unTopo.setImgPintar(secuenciaEstadosNormal.getAfuera().getMatImagen());
++            //unTopo.setImgMaskPintar(secuenciaEstadosNormal.getAfuera().getMatImagenMask());
++            img = unTopo.getImgPintar();
++            unTopo.setFrameAnterior(img);
++            imgMask = unTopo.getImgMaskPintar();
++            int col = unTopo.col;int row = unTopo.row;
++
++            //Log.i(TAG, "****** size screen intento b47 " +screen.size()+" topo size "+img.size()+" topo size empty "+img.size().empty()+" topo estado "+unTopo.getEstado());
++            //img.copyTo(screen.submat( new Rect( 20,20,img.width(),img.height())));
++            final Mat imgRectROI = new Mat();
++            img.copyTo(maskCopyTo); //
++            //maskCopyTo.copyTo(screen); //
++            if(  col > screen.cols()-img.cols()){
++                col = screen.cols()-img.cols();
++            }
++            Rect roi = new Rect(col,row,img.cols(),img.rows());
++            Mat submat= screen.submat(roi);
++            Mat resizeimageMask = Mat.ones( new Size(submat.rows(),submat.cols()), CV_8UC1); //;
++            Imgproc.circle(resizeimageMask, new Point(submat.rows()/2, submat.cols()/2), 20, Scalar.all(255), 2, 8, 0);
++
++            img.copyTo(submat,imgMask);
++            ultimaDeteccion = detectarToque(diff, roi, unTopo.getIdTopo());
++            if (  ultimaDeteccion == ACIERTO){//// el toque se va procesar sobre la imagen que ya se mostro antes de este frame que se esta construyendo, entonces hay un desfase de un frame
++                //imgUltimoAcierto = screen.clone();/// entre lo que se esta mostrando y lo que se toca
++                hayUnAcierto = true;
++                //duracionFrame = LIMITE_DURACION_FRAME;/// para acelerar/forzar la aparicion de la secuencia de golpe
++            }
++            //actualizarScore(screen); siempre se hace, no depende de que se muestre el topo
++        }
++        //unTopo = lstTopos.get(0);
++
++        return  screen;
++    }
++    /*private Topo mostrarSecuenciaGolpe(){
++        if( unTopo.getEstado() == Estado.GOLPEADO){
++            unTopo.setImgPintar( lstSecuenciaGolpe.get(0));
++            unTopo.setImgMaskPintar( lstSecuenciaGolpeMask.get(0));
++      7      unTopo.setEstadoPrevio(unTopo.getEstado());
++            unTopo.setEstado(Estado.ESTRELLAS);
++        } else if( unTopo.getEstado() == Estado.ESTRELLAS){
++            unTopo.setImgPintar( lstSecuenciaGolpe.get(1));
++            unTopo.setImgMaskPintar( lstSecuenciaGolpeMask.get(1));
++            //unTopo.setEstadoPrevio(unTopo.getEstado());
++            unTopo.setEstado(Estado.INVISIBLE);
++            unTopo.setEstadoPrevio(Estado.SIN_SALIR );
++            //unTopo.setEstadoPrevio(Estado.INVISIBLE);/// machetin para provocar que termine de la misma forma que la secuencia normal o generica
++            //unTopo.setEstado(Estado.DESAPARECE); /// el yasalio sirve en combinacion con el machetin del estado previo invisible
++            unTopo.setYaSalio(true);/// se coloca en este estado que es el ultimo de la secuencia de golpe con eso se evita el error de mostrar el estado estrellas en proximo random
++        }
++        return unTopo;
++    }*/
++    private void cargarListaTopos(){
++        if ( lstTopos == null){
++            lstTopos = new ArrayList<Topo>();
++        }
++        int velocidad = 1; int cantidadTopos = 10; int toposSimultaneos = 4;
++        if ( nivel == null ){
++            nivel = new Nivel(velocidad, cantidadTopos, toposSimultaneos);
++            nivel.setIdNivel(1);
++            nivel.setToposSimultaneos(1);
++        }
++        for(int i= 0; i< LIMITE_LISTA_TOPOS; i++){
++            if( sextoDeAnchoPantalla == 0 ){
++                sextoDeAnchoPantalla = mRgba.cols()/DIVISION_PANTALLA_ANCHO;
++            }
++            int row = 0; int col = rand.nextInt(DIVISION_PANTALLA_ANCHO)*sextoDeAnchoPantalla;
++            topoPlantilla.setCol(col);
++            topoPlantilla.setRow(row);
++            Topo nuevoTopo = topoPlantilla.copiar(topoPlantilla);
++            nuevoTopo.setIdTopo(i);
++            lstTopos.add( nuevoTopo );
++        }
++    }
++    private void cargarSecuenciaGolpe(){
++        try {
++            lstSecuenciaGolpe = new ArrayList<Mat>();
++            lstSecuenciaGolpeMask = new ArrayList<Mat>();
++            Mat img;
++            Mat imgMask;
++            imgMask = Utils.loadResource(this, R.drawable.topogolpeadomask, CvType.CV_8UC1); //CV_8UC1  CV_8UC4
++            lstSecuenciaGolpeMask.add(imgMask.clone());
++            imgMask = Utils.loadResource(this, R.drawable.topoestrellasmask, CvType.CV_8UC1); //CV_8UC1  CV_8UC4
++            lstSecuenciaGolpeMask.add(imgMask.clone());
++            img = Utils.loadResource(this, R.drawable.topogolpeado, CvType.CV_8UC4);
++            lstSecuenciaGolpe.add(img.clone());
++            img = Utils.loadResource(this, R.drawable.topoestrellas, CvType.CV_8UC4);
++            lstSecuenciaGolpe.add(img.clone());
++        } catch (IOException e) {
++            e.printStackTrace();
++        }
++    }
++    private Topo mostrarTopoSegunEstado(Topo unTopo ){
++        Mat img = null;
++        //Log.i(TAG, "****** case unTopo.getSecuenciaAnimacion()  "+unTopo.getSecuenciaAnimacion());
++        //Log.i(TAG, "****** case el estado secuencia "+unTopo.getSecuenciaAnimacion().getEstadoActual().idEstado+" idSecuencia "+unTopo.getSecuenciaAnimacion().getIdSecuencia()+" finalizada "+unTopo.getSecuenciaAnimacion().isFinalizada());
++        unTopo.setImgPintar(unTopo.getSecuenciaAnimacion().getEstadoActual().getMatImagen());
++        unTopo.setImgMaskPintar(unTopo.getSecuenciaAnimacion().getEstadoActual().getMatImagenMask());
++        unTopo.getSecuenciaAnimacion().cambiarASiguienteEstado();
++        //img = unTopo.lstSecuencia.get(0);
++        //Log.i(TAG, "****** case resultado estado "+unTopo.getEstado()+" estado previo "+unTopo.getEstadoPrevio());
++        Mat imgResize = new Mat();
++        resize(unTopo.getImgPintar().clone(), imgResize,new Size(100,100));
++        Mat imgMaskResize = new Mat();
++        resize(unTopo.getImgMaskPintar().clone(), imgMaskResize,new Size(100,100));
++        Imgproc.cvtColor(imgResize, imgResize, Imgproc.COLOR_RGB2BGRA);///Imgproc.COLOR_BGR2RGB /// con este ajuste no se ve de color azul, toca ajustar al contrario para cuando se va compartir por whatsapp
++        unTopo.setImgPintar(imgResize);
++        unTopo.setImgMaskPintar(imgMaskResize);
++        //this.unTopo = unTopo;
++        //return  imgResize;
++        return unTopo;
++    }
++    private Mat mostrarTopoSegunEstadoOld(Topo unTopo, Mat img ){
++        //Log.i(TAG, "****** case estado "+unTopo.getEstado()+" estado previo "+unTopo.getEstadoPrevio());
++        switch ( unTopo.getEstado()){
++            case Estado.INVISIBLE:
++                //Log.i(TAG, "****** case invisble estado previo "+unTopo.getEstadoPrevio());
++                if( unTopo.getEstadoPrevio() == Estado.INICIO ){
++                    unTopo.setEstado(Estado.SIN_SALIR);
++                    unTopo.setEstadoPrevio(Estado.INVISIBLE);
++                    img = unTopo.lstSecuencia.get(Estado.SIN_SALIR);
++                } else {
++                    //Log.i(TAG, "****** case invisble estado previo "+unTopo.getEstadoPrevio());
++                    unTopo.setEstado(Estado.DESAPARECE);
++                    unTopo.setEstadoPrevio(Estado.INVISIBLE);
++                    img = unTopo.lstSecuencia.get(Estado.INVISIBLE);
++                }
++                break;
++            case Estado.SIN_SALIR:
++                ////Log.i(TAG, "****** case sin salir");
++                if(unTopo.getEstadoPrevio() == Estado.INVISIBLE){
++                    unTopo.setEstado(Estado.SALIENDO);
++                    unTopo.setEstadoPrevio(Estado.SIN_SALIR);
++                    img = unTopo.lstSecuencia.get(Estado.SALIENDO);
++                } else {
++                    unTopo.setEstado(Estado.INVISIBLE);
++                    unTopo.setEstadoPrevio(Estado.SALIENDO);
++                    img = unTopo.lstSecuencia.get(Estado.SALIENDO);
++                }
++                break;
++            case Estado.SALIENDO:
++                ////Log.i(TAG, "****** case saliendo");
++                if( unTopo.getEstadoPrevio() == Estado.SIN_SALIR){
++                    unTopo.setEstado(Estado.AFUERA);
++                    unTopo.setEstadoPrevio(Estado.SALIENDO);
++                    img = unTopo.lstSecuencia.get(Estado.AFUERA);
++                } else {
++                    unTopo.setEstado(Estado.SIN_SALIR);
++                    unTopo.setEstadoPrevio(Estado.AFUERA);
++                    img = unTopo.lstSecuencia.get(Estado.AFUERA);
++                }
++                break;
++            case Estado.AFUERA:
++                ////Log.i(TAG, "****** case afuera");
++                unTopo.setEstado(Estado.SALIENDO);
++                unTopo.setEstadoPrevio(Estado.AFUERA );
++                img = unTopo.lstSecuencia.get(Estado.AFUERA);
++                break;
++            case Estado.DESAPARECE:
++                //Log.i(TAG, "****** case desaparece");
++                unTopo.setEstado(Estado.DESAPARECE);
++                unTopo.setEstadoPrevio(Estado.INVISIBLE );
++                img = unTopo.lstSecuencia.get(Estado.INVISIBLE);
++                break;
++            default: unTopo.setEstado(Estado.SIN_SALIR);
++                ////Log.i(TAG, "****** case default");
++                unTopo.setEstadoPrevio(Estado.INVISIBLE);
++                img = unTopo.lstSecuencia.get(Estado.SIN_SALIR); ;break;
++        }
++        Mat imgResize = new Mat();
++        resize(img, imgResize,new Size(100,100));
++        Imgproc.cvtColor(imgResize, imgResize, Imgproc.COLOR_RGB2BGRA);///Imgproc.COLOR_BGR2RGB
++        //this.unTopo = unTopo;
++        return  imgResize;
++    }
+     private void verificarAccesoArchivos( String[] files ){
+         String fileStepmania = files[0];
+         fileStepmania = fileStepmania.replace("/mnt/sdcard/","");
+-        //Log.i(TAG, "****** *  fileStepmania "+fileStepmania);
++        Log.i(TAG, "****** *  fileStepmania "+fileStepmania);
+         //String fileSong = files[1];/// solo se escoge el .sm y de ahi se deduce la cancion de acuerdo al directorio
+         PackSong packSong = new PackSong(fileStepmania);
+         game = new GameEngine( contexto, packSong);
+@@ -1628,7 +1904,7 @@
+             final SharedPreferences prefs =
+                     this.getSharedPreferences("molegame", Context.MODE_PRIVATE);
+             String prefVolume = prefs.getString("volume","off");
+-            ////Log.i(TAG, "****** prefvolume "+prefVolume);
++            //Log.i(TAG, "****** prefvolume "+prefVolume);
+             sonidoActivado = (prefVolume.equals("on"))?true:false;
+             MediaPlayer mp = MediaPlayer.create(this, R.raw.whack);
+             float log1=(float)(Math.log(maxVolume-currVolume)/Math.log(maxVolume));
+@@ -1648,7 +1924,7 @@
+                 //reiniciarSecuencia( unTopo.getSecuenciaAnimacion());
+                 //unTopo.setSecuenciaAnimacion(secuenciaEstadosGolpe);
+                 unTopo.getSecuenciaAnimacion().setIdSecuencia(SecuenciaEstados.GOLPE);
+-                //////Log.i(TAG, "****** secuenciaEstadosGolpe "+unTopo.getSecuenciaAnimacion()+" secuenciaEstadosGolpe.estadoActual id"+unTopo.getSecuenciaAnimacion().getEstadoActual().idEstado);
++                ////Log.i(TAG, "****** secuenciaEstadosGolpe "+unTopo.getSecuenciaAnimacion()+" secuenciaEstadosGolpe.estadoActual id"+unTopo.getSecuenciaAnimacion().getEstadoActual().idEstado);
+                 mp = MediaPlayer.create(this, R.raw.whack);
+                 //imgUltimoAcierto = mRgba.clone();
+                 if(sonidoActivado)mp.start();
+@@ -1669,10 +1945,10 @@
+         Rect roiDiff = new Rect(0,0,diff.cols(),diff.rows());
+         int elAcierto = NADA;
+         Imgproc.rectangle(mRgba, roiDiff.tl(), roiDiff.br(), Scalar.all(255), 2);
+-        ////Log.i(TAG, "****** detectando toque  stepmania diff size  "+diff.size()+" mapaReceptores size "+mapaReceptores.size() );
++        //Log.i(TAG, "****** detectando toque  stepmania diff size  "+diff.size()+" mapaReceptores size "+mapaReceptores.size() );
+         for (Map.Entry<Integer, Receptor> entry : mapaReceptores.entrySet()) {
+             Receptor unReceptor = entry.getValue();
+-            ////Log.i(TAG, "****** 1 verificando receptor "+unReceptor.getUbicacion()+" lstPoligono size "+unReceptor.getListaPoligono().size());
++            //Log.i(TAG, "****** 1 verificando receptor "+unReceptor.getUbicacion()+" lstPoligono size "+unReceptor.getListaPoligono().size());
+             List<MatOfPoint> listaReceptor = unReceptor.getListaPoligono();
+             for( int i = 0; i < listaReceptor.size(); i++){
+                 MatOfPoint mpoint = listaReceptor.get(i);
+@@ -1679,17 +1955,17 @@
+                 Rect rPrev = Imgproc.boundingRect(mpoint);//// cuando se trata de las esquinas hay que tomar un subcuadro para evitar desborde pero cuando se hace por carriles
+                 //// paralelos si el rango de x es estrecho va hacer que nunca haya coincidencia de acierto porque la esquina topleft queda por fuera
+                 Rect r = new Rect( new Point (rPrev.tl().x-2,rPrev.tl().y+5) , new Point(rPrev.br().x, rPrev.br().y));
+-                ////Log.i(TAG, "****** 2  verificando receptor "+unReceptor.getUbicacion()+" tl "+r.tl()+" br "+r.br());
++                //Log.i(TAG, "****** 2  verificando receptor "+unReceptor.getUbicacion()+" tl "+r.tl()+" br "+r.br());
+                 Imgproc.rectangle(mRgba, r.tl(), r.br(), Scalar.all(255), 2);
+                 Imgproc.rectangle(mRgba, new Point(mRgba.cols()/2, mRgba.rows()/2), new Point(mRgba.cols(),mRgba.rows()), Scalar.all(255), 2);
+                 if( roiDiff.contains( r.tl()) && roiDiff.contains(r.br())){/// esta verificacion es para saber que no desbordo la pantalla
+                     if( lstPuntosRecientes != null ){
+-                        ////Log.i(TAG, "****** 3 -- verificando receptor "+unReceptor.getUbicacion()+" size pts recientes "+lstPuntosRecientes.size());
++                        //Log.i(TAG, "****** 3 -- verificando receptor "+unReceptor.getUbicacion()+" size pts recientes "+lstPuntosRecientes.size());
+                         Mat submatDiff= diff.submat( r );
+                         if(  Core.countNonZero(submatDiff) > 0 ){/// se verifica  primero la sombra del detector de movimiento sobre el receptor de la esquina
+                             unReceptor.setTocado(true);
+                             elAcierto = FALLA;//// toco el cuadro pero la flecha no estaba ahi
+-                            //Log.i(TAG, "****** 4c verificando receptor "+unReceptor.getUbicacion()+" r tl "+r.tl()+" br "+r.br()+" lstPuntosRecientes size "+lstPuntosRecientes.size());
++                            Log.i(TAG, "****** 4c verificando receptor "+unReceptor.getUbicacion()+" r tl "+r.tl()+" br "+r.br()+" lstPuntosRecientes size "+lstPuntosRecientes.size());
+                             if( rectContienePunts(r,lstPuntosRecientes)){/// y de ultimo se verifica si el receptor y la flecha se traslaparon
+                                 elAcierto = ACIERTO;
+                                 unReceptor.setAcertado(true);
+@@ -1700,7 +1976,7 @@
+             }
+         }
+         borrarPuntosMeasuresViejos();
+-        ////Log.i(TAG, "****** detectando toque stepmania acierto "+elAcierto);
++        //Log.i(TAG, "****** detectando toque stepmania acierto "+elAcierto);
+         return elAcierto;
+     }
+     private boolean rectContienePunts( Rect roi, List<PointMeasure> lstPuntosRecientes ){
+@@ -1707,10 +1983,10 @@
+         /// el measure que esta dentro del for del metodo primera integracion siempre esta en el ultimo como si fuera el size raro toco con otra variable
+         // int ultimoMeasure =
+         int toleracia = 5;/// lo que se ve por pantalla es 4 pero...
+-        ////Log.i(TAG, "****** size lstPuntosRecientes "+lstPuntosRecientes.size());
++        //Log.i(TAG, "****** size lstPuntosRecientes "+lstPuntosRecientes.size());
+         for( PointMeasure elPoint : lstPuntosRecientes){
+-            ////Log.i(TAG, "****** 3 rectContienePunts point measure id "+elPoint.measure.id+" measureActual id "+idUltimoMeasure );
+-            //Log.i(TAG, "****** 3 puntos para revisar del roi tl "+roi.tl()+" br "+roi.br()+" elpoint x "+elPoint.point.x+" y "+elPoint.point.y+" measure point "+elPoint.measure.id+" m actual "+measureActual.id+" idultimomeasure "+idUltimoMeasure );
++            //Log.i(TAG, "****** 3 rectContienePunts point measure id "+elPoint.measure.id+" measureActual id "+idUltimoMeasure );
++            Log.i(TAG, "****** 3 puntos para revisar del roi tl "+roi.tl()+" br "+roi.br()+" elpoint x "+elPoint.point.x+" y "+elPoint.point.y+" measure point "+elPoint.measure.id+" m actual "+measureActual.id+" idultimomeasure "+idUltimoMeasure );
+             if( elPoint.point.y < roi.br().y ){
+                 if( Math.abs( elPoint.point.x-roi.x ) < roi.width/4 ){
+                     return true;
+@@ -1728,12 +2004,12 @@
+     public void onClickShare(View view){
+ 
+         //Bitmap bitmap =getBitmapFromView(view);
+-        ////Log.i(TAG, "****** en onclickshare 1");
++        //Log.i(TAG, "****** en onclickshare 1");
+         //Bitmap bitmap =getBitmapFromMat();
+         Bitmap bitmap = bitmapForShare;
+         //Bitmap bitmap =getBitmapScreenShoot();
+         //Bitmap bitmap =getBitmapFromView(findViewById(R.id.main_layout));
+-        Log.i(TAG, "****** en onclickshare height "+bitmap.getHeight());
++        //Log.i(TAG, "****** en onclickshare height "+bitmap.getHeight());
+         try {
+             //File file = new File(this.getExternalCacheDir(),File.separator+ "logicchip.png");
+             File file = new File(this.getExternalCacheDir(),"logicchip.png");
+@@ -1751,7 +2027,7 @@
+             String shareBody = "Te reto a que superes mi puntaje, descargalo en "+urlJuego;
+             //Intent sharingIntent = new Intent(android.content.Intent.ACTION_SEND);
+             intent.setType("text/plain");
+-            intent.putExtra(android.content.Intent.EXTRA_SUBJECT, "Beat AR Game");
++            intent.putExtra(android.content.Intent.EXTRA_SUBJECT, "smash mole game AR");
+             intent.putExtra(android.content.Intent.EXTRA_TEXT, shareBody);
+             ///////
+             intent.setType("image/png");
+@@ -1763,7 +2039,7 @@
+     }
+     public void guardarImagenUltimoACierto(){
+         //Bitmap bitmap =getBitmapFromView(view);
+-        ////Log.i(TAG, "****** en guardarImagenUltimoACierto 1 toques "+toques);
++        //Log.i(TAG, "****** en guardarImagenUltimoACierto 1 toques "+toques);
+         bitmapForShare =getBitmapFromMat();
+     }
+     private void cargarDialogoFilePicker(){
+@@ -1773,7 +2049,7 @@
+         final String extensionStepmania = ".sm";
+         String dirDefault = Environment.getExternalStorageDirectory() +"/"+ nombreFolderJuego ;//DialogConfigs.DEFAULT_DIR"
+         properties.selection_mode = DialogConfigs.SINGLE_MODE;
+-        properties.selection_type = DialogConfigs.DIR_SELECT;
++        properties.selection_type = DialogConfigs.FILE_AND_DIR_SELECT;
+         properties.root = new File(Environment.getExternalStorageDirectory()+"" );//DialogConfigs.DEFAULT_DIR);
+         properties.error_dir = new File(dirDefault);
+         properties.offset = new File(dirDefault);
+@@ -1794,25 +2070,18 @@
+                 Log.i(TAG, "****** 1  file or dir Stepmania "+fileZipStepmania+"  dir files "+dirFile);
+                 //verificarAccesoArchivos(files);
+                 /*packSongDescargado =  new PackSong(fileStepmania);
+-                 */
++                */
+                 if ( !UtilFile.existeFolder(nombreFolderJuego)){ /// si no existe el folder se crea
+                     UtilFile.createFolder(nombreFolderJuego);
+                     //UtilFile.createFolder2(nombreFolderJuego);
+                 }
+-                if( fileZipStepmania.endsWith(extensionZip) ){/// si es un zip se descomprime en el folder del juego
+-                    //Log.d(TAG, "****** es un file zip ");
++                if( fileZipStepmania.endsWith(extensionZip) ){
++                    Log.d(TAG, "****** es un file zip ");
+                     UtilZip.unzip(fileZipStepmania,nombreFolderJuego);
+-                } else if( fileZipStepmania.endsWith(extensionStepmania ) ){ /// si es un archivo de stempamnia (.sm) se reproduce, lo cual es poco probable, ya que los usuarios no estan famiiarizados con la extensione
+-                    //Log.d(TAG, "****** es un file stepmania ");
++                } else if( fileZipStepmania.endsWith(extensionStepmania ) ){
++                    Log.d(TAG, "****** es un file stepmania ");
+                     fileZipStepmania = fileZipStepmania.replace(pathStoreEmulated,"");
+                     packSongDescargado =  new PackSong(fileZipStepmania);
+-                } else if ( !fileZipStepmania.contains(".")){ /// si no se asume que solo escogieron el directorio luego tambien se asume que el archivo .sm se llama igual que el directorio
+-                    fileZipStepmania = fileZipStepmania.replace(pathStoreEmulated,"");/// esto mientras se piensa si iterar el directorio en busca de un sm , pero si hay varios podria falla , tocaria revisar
+-                    String nameFile = fileZipStepmania.substring(fileZipStepmania.lastIndexOf("/"),fileZipStepmania.length());
+-                    Log.i(TAG, "****** nameFile  "+nameFile);
+-                    fileZipStepmania = fileZipStepmania+"/"+nameFile+extensionStepmania;
+-                    packSongDescargado =  new PackSong(fileZipStepmania);
+-                    game = new GameEngine(contexto, packSongDescargado );
+                 }
+             }
+         });
+@@ -1852,7 +2121,7 @@
+     }
+     //create bitmap from view and returns it
+     private Bitmap getBitmapFromMat() {
+-        ////Log.i(TAG, "****** en getBitmapFromMat 11  ");
++        //Log.i(TAG, "****** en getBitmapFromMat 11  ");
+         Mat matLocal = imgUltimoAcierto;//mRgba.clone();
+         //Define a bitmap with the same size as the view
+         //Bitmap returnedBitmap = Bitmap.createBitmap(view.getWidth(), view.getHeight(),Bitmap.Config.ARGB_8888);
+@@ -1877,7 +2146,7 @@
+             bmp = swapRed2blue(bmp);/// esta jugada es la que puede demorar en procesamiento
+         }
+         catch (CvException e){
+-            //Log.d("Exception",e.getMessage());
++            Log.d("Exception",e.getMessage());
+             e.printStackTrace();
+         }
+ 
+@@ -1908,7 +2177,7 @@
+         //onFacebookImageNative(pixels, len, bitmap.getWidth(), bitmap.getHeight(), bitsPerComponent);
+     }
+     private Bitmap getBitmapScreenShoot() {
+-        ////Log.i(TAG, "****** en getBitmapScreenShoot 3");
++        //Log.i(TAG, "****** en getBitmapScreenShoot 3");
+         // create bitmap screen capture
+         View v1 = getWindow().getDecorView().getRootView();
+         v1.setDrawingCacheEnabled(true);
+@@ -1930,13 +2199,13 @@
+         //manager.load("data/mytexture.png", Texture.class);
+         //manager.load(urlFile,TextureAtlas.class);/// esto debe ir en el oncreate
+         InputStream is = null;
+-        ////Log.i(TAG, "****** load receptor con assmanager de android  is not null "+(  is != null) );
++        //Log.i(TAG, "****** load receptor con assmanager de android  is not null "+(  is != null) );
+         try {
+             is = this.assManager.open("good.png");
+ 
+             Bitmap  bitmap = BitmapFactory.decodeStream(is);
+             Mat img = new Mat(bitmap.getHeight(), bitmap.getWidth(), CvType.CV_8UC4);
+-            ////Log.i(TAG, "****** load receptor con assmanager de android  is not null "+(  is != null) + " size cols "+img.cols()+" rows "+img.rows());
++            //Log.i(TAG, "****** load receptor con assmanager de android  is not null "+(  is != null) + " size cols "+img.cols()+" rows "+img.rows());
+             //displayBitmap(img);
+             Mat imgResize = new Mat();
+             resize(img.clone(), imgResize,new Size(200,200));
+@@ -1955,14 +2224,14 @@
+         /*
+         if( manager != null ){
+             //Texture  receptorTexture = manager.get("receptor.png", Texture.class);
+-            ////Log.i(TAG, "****** load arrow with assetmanager isloaded "+manager.isLoaded("receptor.png",  Texture.class));
+-            ////Log.i(TAG, "****** bitmap from atlas , exists "+fh.exists()+"  isLoaded "+manager.isLoaded(urlFileAtlas));
++            //Log.i(TAG, "****** load arrow with assetmanager isloaded "+manager.isLoaded("receptor.png",  Texture.class));
++            //Log.i(TAG, "****** bitmap from atlas , exists "+fh.exists()+"  isLoaded "+manager.isLoaded(urlFileAtlas));
+             if( fh != null && fh.exists() && manager.isLoaded(urlFileAtlas)){
+                 atlas = manager.get(urlFileAtlas,TextureAtlas.class);
+                 TextureAtlas.AtlasRegion region = atlas.findRegion("arMarvelous");
+                 Pixmap pixmap = region.getTexture().getTextureData().consumePixmap();
+                 Bitmap bitmap = pixMap2BitMap(pixmap);
+-                ////Log.i(TAG, "****** bitmap from atlas  "+bitmap.getWidth()+" x "+bitmap.getHeight());
++                //Log.i(TAG, "****** bitmap from atlas  "+bitmap.getWidth()+" x "+bitmap.getHeight());
+                 Mat img = new Mat(bitmap.getHeight(), bitmap.getWidth(),
+                         CvType.CV_8UC4);
+                 //displayBitmap(img);
+@@ -2061,7 +2330,7 @@
+             img = scoreRes.getImg();
+             imgMask = scoreRes.getImgMask();
+             Rect roi = new Rect(posx,posy, img.cols(),img.rows());
+-            ////Log.i(TAG, "****** 2 imagen score para pintar size "+img.size());
++            //Log.i(TAG, "****** 2 imagen score para pintar size "+img.size());
+             Mat subMat = mRgba.submat(roi);
+             img.copyTo(subMat,imgMask);
+ 
+@@ -2102,23 +2371,11 @@
+             for( Float elPuntaje : game.getLstPuntajes()){
+                 puntajeAcumulado+=elPuntaje;
+             }//// aki se cambia numero para verificar cambio
+-            Imgproc.putText(screen, " "+puntajeAcumulado,
++            Imgproc.putText(screen, "8 "+puntajeAcumulado,
+                     new Point(screen.width()*0.2, screen.height()*0.8),
+                     face[3], size, new Scalar(0,255,0),3,1);
+         }
+     }
+-    private void mostrarInfoCancion ( Mat screen){
+-        float size = 2.0f;
+-        /*String nombreCancion  = game.smFile.title;
+-          if( packSongDescargado != null ){
+-            nombreCancion = packSongDescargado.getFileStepmania().
+-        }*/
+-        if( game != null && game.smFile != null ){
+-            Imgproc.putText(screen, "Song "+game.smFile.title,
+-                    new Point(screen.width()*0.2, screen.height()*0.6),
+-                    face[3], size, new Scalar(0,255,0),3,1);
+-        }
+-    }
+     private void mostrarMensajeEspera( Mat screen){
+         float size = 5.0f;
+         if( enEspera){
+@@ -2242,7 +2499,7 @@
+         int PIXEL_DIFF_THRESHOLD = 5;
+         int IMAGE_DIFF_THRESHOLD = 5;
+         //Mat base = new Mat();
+-        ////Log.i(TAG, "****** en hasChanges ");
++        //Log.i(TAG, "****** en hasChanges ");
+         Mat bg = new Mat();
+         Mat cg = new Mat();
+         Mat diff = new Mat();
+@@ -2268,11 +2525,11 @@
+         int n = 0;
+         for (Mat pm: points) {
+             //log(lvl, "(%d) %s", n++, pm);
+-            ////Log.i(TAG, "****** points " + n+++" "+pm);
++            //Log.i(TAG, "****** points " + n+++" "+pm);
+             //printMatI(pm);
+         }
+         //log(lvl, "contours: %s", contours);
+-        ////Log.i(TAG, "****** countours " +contours);
++        //Log.i(TAG, "****** countours " +contours);
+         //printMatI(contours);
+         //the largest contour is found at the end of the contours vector
+         //we will simply assume that the biggest contour is the object we are looking for.
+@@ -2299,7 +2556,7 @@
+         int PIXEL_DIFF_THRESHOLD = 5;
+         int IMAGE_DIFF_THRESHOLD = 5;
+         //Mat base = new Mat();
+-        ////Log.i(TAG, "****** en hasChanges ");
++        //Log.i(TAG, "****** en hasChanges ");
+         Mat bg = new Mat();
+         Mat cg = new Mat();
+         Mat diff = new Mat();
+@@ -2325,11 +2582,11 @@
+         int n = 0;
+         for (Mat pm: points) {
+             //log(lvl, "(%d) %s", n++, pm);
+-            ////Log.i(TAG, "****** points " + n+++" "+pm);
++            //Log.i(TAG, "****** points " + n+++" "+pm);
+             //printMatI(pm);
+         }
+         //log(lvl, "contours: %s", contours);
+-        ////Log.i(TAG, "****** countours " +contours);
++        //Log.i(TAG, "****** countours " +contours);
+         //printMatI(contours);
+         //the largest contour is found at the end of the contours vector
+         //we will simply assume that the biggest contour is the object we are looking for.
+@@ -2353,13 +2610,13 @@
+     }
+ 
+     public MainActivity() {
+-        ////Log.i(TAG, "Instantiated new " + this.getClass());
++        //Log.i(TAG, "Instantiated new " + this.getClass());
+     }
+     final int MY_PERMISSIONS_REQUEST_READ_CONTACTS = 1;
+     /** Called when the activity is first created. */
+     @Override
+     public void onCreate(Bundle savedInstanceState) {
+-        ////Log.i(TAG, "****** called onCreate v33 ");
++        //Log.i(TAG, "****** called onCreate v33 ");
+         // Here, thisActivity is the current activity
+         //// PERMISO PARA CAMARA
+         if (ContextCompat.checkSelfPermission(this,
+@@ -2478,7 +2735,7 @@
+         int ultimoNivelSuperado = prefs.getInt(ULTIMO_NIVEL_SUPERADO, 0);
+         //layoutNiveles = findViewById(R.id.layoutNiveles);
+         if( ultimoNivelSuperado == 0 ){
+-            //  layoutNiveles.setVisibility(View.GONE);
++          //  layoutNiveles.setVisibility(View.GONE);
+         }
+         //cargarSecuenciaGolpe();
+         ///// para load stepmania files con libgdx
+@@ -2498,13 +2755,11 @@
+         textLinksDowload.setMovementMethod(LinkMovementMethod.getInstance());
+         textLinksDowload.setText(Html.fromHtml(LinksDowloads.htmlString1));
+         textLinksDowload.setVisibility(View.GONE);
+-        scrollTextoLinks = (ScrollView)findViewById(R.id.scrollLayout1);
+-        scrollTextoLinks.setVisibility(View.GONE);
+         /*RelativeLayout layoutRotar =  (RelativeLayout) findViewById( R.id.LinearARotar );
+         CoordinatorLayout mainLayout =  (CoordinatorLayout) findViewById( R.id.main_layout );
+         int w = layoutRotar.getWidth();
+         int h = layoutRotar.getHeight();
+-        //Log.d(TAG, "******b  width "+w+" h "+h+" mainlayout "+findViewById(R.id.main_layout).getHeight()+" "+findViewById(R.id.main_layout).getWidth());
++        Log.d(TAG, "******b  width "+w+" h "+h+" mainlayout "+findViewById(R.id.main_layout).getHeight()+" "+findViewById(R.id.main_layout).getWidth());
+         layoutRotar.setRotation(90.0f);
+         //layoutRotar.setTranslationX((w - h) / 2);
+         //layoutRotar.setTranslationY((h - w) / 2);
+@@ -2529,7 +2784,7 @@
+         if( !introYaSonando){
+             mpIntro = MediaPlayer.create(this, R.raw.musicintroloop);
+             mpIntro.start();
+-            //Log.d(TAG,"******* a reproduciendo intro en oncreate");
++            Log.d(TAG,"******* a reproduciendo intro en oncreate");
+             introYaSonando = true;
+         }
+     }
+@@ -2582,13 +2837,13 @@
+     {
+         super.onResume();
+         if (!OpenCVLoader.initDebug()) {
+-            //Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
++            Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
+             OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_11, this, mLoaderCallback);
+         } else {
+-            //Log.d(TAG, "OpenCV library found inside package. Using it!");
++            Log.d(TAG, "OpenCV library found inside package. Using it!");
+             mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+         }
+-        ////Log.i(TAG, "*********** posible salida onresume ");
++        //Log.i(TAG, "*********** posible salida onresume ");
+     }
+ 
+     public void onDestroy() {
+@@ -2595,13 +2850,13 @@
+         super.onDestroy();
+         if (mOpenCvCameraView != null)
+             mOpenCvCameraView.disableView();
+-        ////Log.i(TAG, "*********** posible salida ondestroy ");
++        //Log.i(TAG, "*********** posible salida ondestroy ");
+     }
+     @Override
+     public void onBackPressed() {
+         // your code.
+         game.getLstPuntajes();
+-        ////Log.i(TAG, "*********** posible salida onbackpressed ");
++        //Log.i(TAG, "*********** posible salida onbackpressed ");
+         finish();
+         System.exit(0);
+     }
+@@ -2631,14 +2886,9 @@
+         copiaRgba = mRgba.clone();
+         long tiempoActual = System.currentTimeMillis();
+         long difTempEspera =  tiempoActual - tiempoFinEspera;
+-        long holguraEspera = 3000;// toco aumentar la holgura porque con la cancion de pacman falla
+-        Log.i(TAG, "****** difTempEspera "+difTempEspera+" holguraEspera "+holguraEspera);
+-        boolean isMusicPlaying = true;
+-        if ( game != null ){
+-            Log.i(TAG, "****** time song "+game.songPlayer.time+" is musicPlaying "+game.songPlayer.isMusicPlaying());
+-            isMusicPlaying = game.songPlayer.isMusicPlaying();
+-        }
+-        if( inicioJuego && isMusicPlaying){
++        long holguraEspera = 1000;
++        Log.i(TAG, "****** difTempEspera "+difTempEspera);
++        if( inicioJuego && difTempEspera > holguraEspera ){
+             mRgba =  hasChanges3(mRgba);
+             primeraIntegracionConStepMania();
+             flipado = true;///se flipea dentro del haschanges
+@@ -2663,14 +2913,12 @@
+         //mostrarNivel(mRgba);
+         mostrarPuntajesStepmania();
+         mostrarPuntajeStepmania(mRgba);
+-        mostrarInfoCancion(mRgba);
+         mostrarReceptoresPoligono();
+         mostrarReceptoresPoligonoTocado();
+         mostrarReceptoresPoligonoAcertado();
+         if( hayUnAcierto ){
+-            Log.i(TAG, "****** hayUnAcierto copiando mrgba a mat de imagen ");
+             imgUltimoAcierto = mRgba.clone();
+-            //guardarImagenUltimoACierto();/// si guardo aki se relentiza y bajan los fps entonces toca en un hilo aparte
++            //guardarImagenUltimoACierto();
+             hayUnAcierto = false;
+             //mRgba =  hasChanges3(mRgba);/// se llama mostrar el topo aki para que sea mas inmediata la retroalimentacion de la animacion
+             flipado = true;///se flipea dentro del haschanges
+@@ -2688,7 +2936,7 @@
+                 for(Float puntaje : lstPuntajes){
+                     strPuntajesStep+=puntaje+" ";
+                 }
+-                ////Log.i(TAG, "****** puntajes stepmania "+strPuntajesStep);
++                //Log.i(TAG, "****** puntajes stepmania "+strPuntajesStep);
+             }
+         }
+     }
+@@ -2730,7 +2978,6 @@
+                     botonSongs.setVisibility(View.GONE);
+                     botonSelectFile.setVisibility(View.GONE);
+                     textLinksDowload.setVisibility(View.GONE);
+-                    scrollTextoLinks.setVisibility(View.GONE);
+                     toques = 0;
+                     puntajeAcumulado = 0;
+                     contadorNotasUltimoMeasure = 0;
+@@ -2762,7 +3009,6 @@
+             case R.id.buttonSongs:
+                 // do your code
+                 textLinksDowload.setVisibility(View.VISIBLE);
+-                scrollTextoLinks.setVisibility(View.VISIBLE);
+                 break;
+             default:
+                 break;
+@@ -2800,12 +3046,12 @@
+                 /*getFragmentManager().beginTransaction()
+                         .replace(android.R.id.content, new Fragment_Settings()).addToBackStack(null)
+                         .commit();*/
+-                //Log.i("Fragment Settings "," elegido volume");
++                Log.i("Fragment Settings "," elegido volume");
+                 builder = new AlertDialog.Builder(this);
+                 v = this.getLayoutInflater().inflate(R.layout.volume, null);
+                 final RadioGroup volume = (RadioGroup) v.findViewById(R.id.volume);
+                 final String selVolume = prefs.getString("volume", "off");
+-                //Log.i("Fragment Settings "," elegido volume con anterioridad "+selVolume);
++                Log.i("Fragment Settings "," elegido volume con anterioridad "+selVolume);
+                 if ( selVolume.equals("on")){
+                     volume.check( R.id.on);
+                 } else if (selVolume.equals("off") ){
+@@ -2822,9 +3068,9 @@
+                     public void onClick(DialogInterface dialog, int which) {
+                         try {
+                             int selVolumerInt = volume.getCheckedRadioButtonId();
+-                            //Log.i("Fragment Settings ","******* elegido volume onclick "+selVolumerInt+" on "+R.id.on+" off "+R.id.off);
++                            Log.i("Fragment Settings ","******* elegido volume onclick "+selVolumerInt+" on "+R.id.on+" off "+R.id.off);
+                             if ( selVolumerInt == R.id.on){
+-                                //Log.i("Fragment Settings "," elegido volume on");
++                                Log.i("Fragment Settings "," elegido volume on");
+                                 prefs.edit()
+                                         .putString("volume","on").apply();
+                             }else if ( selVolumerInt == R.id.off){
+Index: java/com/fdbgames/mole/game/GameEngine.java
+===================================================================
+--- java/com/fdbgames/mole/game/GameEngine.java	(revisión: 1838)
++++ java/com/fdbgames/mole/game/GameEngine.java	(revisión: 1830)
+@@ -34,7 +34,6 @@
+ 	public Chart chart;
+ 	public SongPlayer songPlayer;
+ 	Context context;
+-	PackSong packSong;
+ 	int idJuego;
+ 
+ 	private int[] input;
+@@ -68,7 +67,7 @@
+ 		if( Gdx.files == null){
+ 			Log.i(TAG, "****** Gdx.files.internal es null ");
+ 		}
+-		FileHandle fh =  Gdx.files.internal("Pacman.sm");
++		FileHandle fh =  Gdx.files.internal("SILVER DREAM.sm");
+ 		if( fh == null){
+ 			Log.i(TAG, "****** filehandle es null ");
+ 		} else {
+@@ -75,6 +74,7 @@
+ 			Log.i(TAG, "****** filehandle no es null ");
+ 		}
+ 		play(new SMFile(fh), "Easy");
++		String fileName = "SILVER DREAM.sm";
+ 		Log.i(TAG, "****** otro constructor de GameEngine ");
+ 		//play(new SMFile(fileName, context ), "Hard");
+ 	}
+@@ -86,7 +86,7 @@
+ 		if( Gdx.files == null){
+ 			Log.i(TAG, "****** Gdx.files.internal es null ");
+ 		}
+-		FileHandle fh =  Gdx.files.internal("Pacman.sm");
++		FileHandle fh =  Gdx.files.internal("SILVER DREAM.sm");
+ 		if( fh == null){
+ 			Log.i(TAG, "****** filehandle es null ");
+ 		} else {
+@@ -93,6 +93,7 @@
+ 			Log.i(TAG, "****** filehandle no es null ");
+ 		}
+ 		play(new SMFile(fh), "Easy");
++		String fileName = "SILVER DREAM.sm";
+ 		Log.i(TAG, "****** otro constructor de GameEngine ");
+ 		//play(new SMFile(fileName, context ), "Hard");
+ 	}
+@@ -118,9 +119,7 @@
+ 		} else {
+ 			Log.i(TAG, "****** filehandle no es null ");
+ 		}
+-		this.smFile = new SMFile(fh) ;
+-		this.packSong = packSong;
+-		//play( "Easy",packSong);
++		play(new SMFile(fh), "Easy",packSong);
+ 		Log.i(TAG, "****** otro constructor de GameEngine ");
+ 	}
+ 
+@@ -133,63 +132,34 @@
+ 	}
+ 	public void play(SMFile file, String difficulty) {
+ 		this.smFile = file;
+-		Log.i(TAG, "****** trayendo cancion por defecto pacman... ");
+ 		this.chart = file.charts.get(difficulty);
+-		if( chart == null ){
+-			difficulty = difficulty.toLowerCase();
+-			this.chart = smFile.charts.get(difficulty);
+-			if( chart == null ){/// si no hay un nivel facil se toma el primero que haya mientra se hace una gui para navegar los niveles
+-				/// aunque no creo porque no van a poder logra tanta velocidad como para usar las mismas dificultades del tapete o del teclado
+-				Log.i(TAG, "****** mod no se encuentra la dificultad "+difficulty+" en el archivo descargado toco tomar el primero que exista ");
+-				chart = smFile.charts.entrySet().iterator().next().getValue();
+-			}
+-		}
+-		Log.i(TAG, "****** file.chats size "+smFile.charts.size());
+-		Log.i(TAG, "****** file.offset "+smFile.offset);
+-		Log.i(TAG, "****** file.tittle "+smFile.title);
+-		Log.i(TAG, "****** file.musicFile "+smFile.musicFile);
+-		Log.i(TAG, "****** file.timingData "+smFile.timingData);
+-		Log.i(TAG, "****** file.timingData "+smFile.header);
+-		FileHandle fhMusic =  Gdx.files.internal("Pacman.mp3");
++		Log.i(TAG, "****** file.chats size "+file.charts.size());
++		Log.i(TAG, "****** file.offset "+file.offset);
++		FileHandle fhMusic =  Gdx.files.internal("SILVER DREAM.mp3");
+ 		this.songPlayer = new SongPlayer( Gdx.audio.newMusic(fhMusic), file.offset);
+         //this.songPlayer = new SongPlayer( file.offset);
+ 		songPlayer.start();
+-		Log.i(TAG, "****** time song "+songPlayer.time);
+ 		//MediaPlayer mp = MediaPlayer.create(context, R.raw.silvedream);
+ 		//mp.start();
+ 	}
+-	public void play(String difficulty) {
+-		this.chart = smFile.charts.get(difficulty);
+-		Log.i(TAG, "****** file.chats size "+smFile.charts.size());
+-		Log.i(TAG, "****** file.offset "+smFile.offset);
+-		FileHandle fhMusic =  Gdx.files.internal("SILVER DREAM.mp3");
+-		this.songPlayer = new SongPlayer( Gdx.audio.newMusic(fhMusic), smFile.offset);
+-		//this.songPlayer = new SongPlayer( file.offset);
+-		songPlayer.start();
+-		//MediaPlayer mp = MediaPlayer.create(context, R.raw.silvedream);
+-		//mp.start();
+-	}
+-	public void play(){
+-		play( "Easy",packSong);
+-	}
+-	public void play(String difficulty, PackSong packSong) {
++	public void play(SMFile file, String difficulty, PackSong packSong) {
++		this.smFile = file;
+ 		String separador = "/";
+-		this.chart = smFile.charts.get(difficulty);
+-		UtilFile.mostrarCharts(smFile.charts);
++		this.chart = file.charts.get(difficulty);
++		UtilFile.mostrarCharts(file.charts);
+ 		if( chart == null ){
+ 			difficulty = difficulty.toLowerCase();
+-			this.chart = smFile.charts.get(difficulty);
++			this.chart = file.charts.get(difficulty);
+ 			if( chart == null ){/// si no hay un nivel facil se toma el primero que haya mientra se hace una gui para navegar los niveles
+ 				/// aunque no creo porque no van a poder logra tanta velocidad como usar las mismas dificultades del tapete o del teclado
+ 				Log.i(TAG, "****** mod no se encuentra la dificultad "+difficulty+" en el archivo descargado toco tomar el primero que exista ");
+-				chart = smFile.charts.entrySet().iterator().next().getValue();
++				chart = file.charts.entrySet().iterator().next().getValue();
+ 			}
+ 		}
+-		Log.i(TAG, "****** file.chats size "+smFile.charts.size());
+-		Log.i(TAG, "****** file.offset "+smFile.offset);
+-		Log.i(TAG, "****** file.tittle "+smFile.title);
+-		Log.i(TAG, "****** file.musicFile "+smFile.musicFile);
+-		Log.i(TAG, "****** file.timingData "+smFile.timingData);
++		Log.i(TAG, "****** file.chats size "+file.charts.size());
++		Log.i(TAG, "****** file.offset "+file.offset);
++		Log.i(TAG, "****** file.tittle "+file.title);
++		Log.i(TAG, "****** file.musicFile "+file.musicFile);
+ 		Log.i(TAG, "****** path file antes de extraer "+packSong.getFileStepmania());
+ 		/**String fullPath = "C:\\Hello\\AnotherFolder\\The File Name.PDF";
+ 		 int index = fullPath.lastIndexOf("\\");
+@@ -199,11 +169,11 @@
+ 		//String pathFile = packSong.getFileStepmania().replace(file.title+".sm","");
+ 		String pathFile = packSong.getFileStepmania().substring(0, index+1 );
+ 		Log.i(TAG, "****** path file extraido "+pathFile);
+-		FileHandle fhMusic =  Gdx.files.external(pathFile+smFile.musicFile);
+-		Log.i(TAG, "****** 2 path file song "+pathFile+smFile.musicFile);
++		FileHandle fhMusic =  Gdx.files.external(pathFile+file.musicFile);
++		Log.i(TAG, "****** 2 path file song "+pathFile+file.musicFile);
+ 		//this.songPlayer = new SongPlayer((Music) SMAssets.context.get(file.musicFile), file.offset);
+ 		//this.songPlayer = new SongPlayer((Music) SMAssets.context.get(file.musicFile), file.offset);
+-		this.songPlayer = new SongPlayer( Gdx.audio.newMusic(fhMusic), smFile.offset);
++		this.songPlayer = new SongPlayer( Gdx.audio.newMusic(fhMusic), file.offset);
+ 		//this.songPlayer = new SongPlayer( file.offset);
+ 		songPlayer.start();
+ 		//MediaPlayer mp = MediaPlayer.create(context, R.raw.silvedream);
+Index: java/com/fdbgames/mole/game/LinksDowloads.java
+===================================================================
+--- java/com/fdbgames/mole/game/LinksDowloads.java	(revisión: 1838)
++++ java/com/fdbgames/mole/game/LinksDowloads.java	(revisión: 1830)
+@@ -29,7 +29,7 @@
+ 
+ 
+     static public String htmlString1  =
+-                                "<h1>List links dowload songs </h1>\n"+
++                                "<h1>Liste links dowload songs </h1>\n"+
+                                 "<p><a href=\"https://zenius-i-vanisher.com/v5.2/simfiles.php?category=top_user\">Zenius-i-vanisher</a>\n" +
+             "                    <a href=\"https://search.stepmaniaonline.net\">Stepmania ALL</a><br><br>\n" +
+             "                    <a href=\"https://violentvioletsims.wixsite.com/zerolaggaming\">[Pop]Violent sims</a> <br><br>\n" +
+Index: java/com/fdbgames/mole/game/SongPlayer.java
+===================================================================
+--- java/com/fdbgames/mole/game/SongPlayer.java	(revisión: 1838)
++++ java/com/fdbgames/mole/game/SongPlayer.java	(revisión: 1830)
+@@ -32,7 +32,4 @@
+ 			time = (time + musicPosition) / 2;
+ 		}
+ 	}
+-	public boolean isMusicPlaying(){
+-		return  music.isPlaying();
+-	}
+ }
+Index: res/layout/activity_main.xml
+===================================================================
+--- res/layout/activity_main.xml	(revisión: 1838)
++++ res/layout/activity_main.xml	(revisión: 1830)
+@@ -25,6 +25,7 @@
+         android:id="@+id/LinearARotar"
+         android:layout_width="match_parent"
+         android:layout_height="match_parent"
++        android:background="#50f4f1"
+         tools:context=".MainActivity"
+         android:orientation="vertical">
+     <LinearLayout
+@@ -32,41 +33,27 @@
+         android:layout_width="match_parent"
+         android:layout_height="match_parent"
+         android:orientation="vertical">
+-
+     <LinearLayout
+         android:id="@+id/LinearLayout1"
+         android:layout_width="match_parent"
+         android:layout_height="0dp"
+         android:layout_weight="4"
+-        android:padding="20dp"
+-        android:layout_margin="20px"
+         android:orientation="horizontal">
+-        <ScrollView
+-            android:id="@+id/scrollLayout1"
+-            android:layout_width="match_parent"
+-            android:background="#95de42"
+-            android:layout_height="match_parent">
+-            <LinearLayout
+-                android:layout_width="match_parent"
+-                android:layout_height="match_parent"
+-                android:background="#95de42"
+-                >
+-                <TextView
+-                    android:id="@+id/display_html_string"
+-                    android:layout_height="wrap_content"
+-                    android:layout_width="wrap_content"
+-                    android:text="Text1"
+-                    android:textColorHighlight="#ffffff"
+-                    android:textColorLink="#ffffff"
+-                    android:textColor="#ffffff"
+-                    android:background="#000000"
+-                    android:layout_margin="10dp"
+-                    />
+-            </LinearLayout>
+ 
+-        </ScrollView>
++        <TextView
++            android:id="@+id/display_html_string"
++            android:layout_height="wrap_content"
++            android:layout_width="wrap_content"
++            android:text="Text1"
++            android:textColorHighlight="#ffffff"
++            android:textColorLink="#ffffff"
++            android:textColor="#ffffff"
++            android:background="#000000"
++            android:layout_margin="10dp"
++            />
+ 
+ 
++
+     </LinearLayout>
+ 
+     <LinearLayout
+Index: res/values/strings.xml
+===================================================================
+--- res/values/strings.xml	(revisión: 1838)
++++ res/values/strings.xml	(revisión: 1830)
+@@ -15,7 +15,6 @@
+     <string name="score">score</string>
+     <string name="time">time</string>
+     <string name="ubicacion">locate inside the figure</string>
+-    <string name="ubicacion2">figure</string>
+     <string name="precauciones1">Avoid having people or </string>
+     <string name="precauciones2">objects nearby while </string>
+     <string name="precauciones3">playing</string>
+Index: res/drawable/fondoblanco.png
+===================================================================
+No se puede mostrar: el archivo está marcado como binario.
+svn:mime-type = application/octet-stream
+Index: res/drawable/fondoblanco.png
+===================================================================
+--- res/drawable/fondoblanco.png	(revisión: 1838)
++++ res/drawable/fondoblanco.png	(nonexistent)
+
+Cambios de propiedades en res/drawable/fondoblanco.png
+___________________________________________________________________
+Deleted: svn:mime-type
+## -1 +0,0 ##
+-application/octet-stream
+\ No newline at end of property
+Index: res/drawable/imgsiluetamedia.png
+===================================================================
+No se puede mostrar: el archivo está marcado como binario.
+svn:mime-type = application/octet-stream
+Index: res/drawable/imgsiluetamedia.png
+===================================================================
+--- res/drawable/imgsiluetamedia.png	(revisión: 1838)
++++ res/drawable/imgsiluetamedia.png	(nonexistent)
+
+Cambios de propiedades en res/drawable/imgsiluetamedia.png
+___________________________________________________________________
+Deleted: svn:mime-type
+## -1 +0,0 ##
+-application/octet-stream
+\ No newline at end of property
+Index: res/mipmap-hdpi/ic_launcher.png
+===================================================================
+No se puede mostrar: el archivo está marcado como binario.
+svn:mime-type = application/octet-stream
+Index: res/mipmap-mdpi/ic_launcher.png
+===================================================================
+No se puede mostrar: el archivo está marcado como binario.
+svn:mime-type = application/octet-stream
+Index: res/mipmap-xhdpi/ic_launcher.png
+===================================================================
+No se puede mostrar: el archivo está marcado como binario.
+svn:mime-type = application/octet-stream
+Index: res/mipmap-xxhdpi/ic_launcher.png
+===================================================================
+No se puede mostrar: el archivo está marcado como binario.
+svn:mime-type = application/octet-stream
+Index: res/mipmap-xxxhdpi/ic_launcher.png
+===================================================================
+No se puede mostrar: el archivo está marcado como binario.
+svn:mime-type = application/octet-stream
