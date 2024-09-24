@@ -8,4 +8,4 @@ al kinetics de microsoft.
 If you have played stepmania or also known as dance revolution then you will understand the idea of ​​the game but instead of using the mat you face the cell phone and use your hands to hit the arrows, something similar
 to microsoft kinetics.
 
-[![Mira el video en YouTube](https://www.youtube.com/watch?v=1Zwp_N_ER1E/0.jpg)](https://www.youtube.com/watch?v=1Zwp_N_ER1E)
+[![Mira el video en YouTube](https://img.youtube.com/vi/1Zwp_N_ER1E/0.jpg)](https://www.youtube.com/watch?v=1Zwp_N_ER1E)
